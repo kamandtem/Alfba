@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Eraser, Flag, Package, RefreshCw, Undo2, Volume2 } from 'lucide-react';
-import { CURRICULUM, LETTER_BOX } from '../data/curriculum';
+import { CURRICULUM, LETTER_BOX, bookLessonOf, kidGlyph } from '../data/curriculum';
 import { findWord, lessonWords, WordEntry, wordsUpTo } from '../data/wordBank';
 import { finishProblem, parseToken, plainSequence, renderSequence, validateSequence } from '../utils/pieces';
 import { sound } from '../utils/audio';
@@ -218,7 +218,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     if (!drag) return null;
     if (drag.kind === 'word') return null;
     if (drag.kind === 'free' && !drag.moved) return null;
-    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{parseToken(drag.token).glyph}</span>;
+    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{kidGlyph(parseToken(drag.token).glyph)}</span>;
   };
 
   const dragFreeId = drag?.kind === 'free' && drag.moved ? drag.id : null;
@@ -238,7 +238,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
 
     {target && <section className="wv-target">
       <span className="wv-target-emoji">{target.emoji || '📝'}</span>
-      <div><small>{mode === 'lesson' ? `درس ${toFa(Math.max(2, lessonOrder))} · کلمهٔ ${toFa(targetIdx % lessonList.length + 1)} از ${toFa(lessonList.length)}` : 'این کلمه را بنویس:'}</small><b className="tahriri">{target.word}</b></div>
+      <div><small>{mode === 'lesson' ? `درس ${toFa(bookLessonOf(Math.max(2, lessonOrder)))} کتاب · کلمهٔ ${toFa(targetIdx % lessonList.length + 1)} از ${toFa(lessonList.length)}` : 'این کلمه را بنویس:'}</small><b className="tahriri">{target.word}</b></div>
       <button onClick={() => sound.speakPersian(speakable(target.word))} aria-label="شنیدن"><Volume2 /></button>
       <button className={`wv-next ${solved ? 'pulse' : ''}`} onClick={next}><RefreshCw /> کلمهٔ بعدی</button>
     </section>}
@@ -251,7 +251,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
       <div className={`wv-line ${hoverLine ? 'hot' : ''}`} style={{ top: lineY }} />
       <div className="wv-band" style={{ top: lineY - band, height: band * 2 }} />
 
-      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{parseToken(p.token).glyph}</span>)}
+      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{kidGlyph(parseToken(p.token).glyph)}</span>)}
 
       {words.map(w => {
         const defs = w.seq.map(s => parseToken(s.token));
@@ -276,11 +276,11 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
         <header><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلی را که می‌خواهی روی تخته بکش</small><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
         {boxKey && <div className="box-forms">
-          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{parseToken(t).glyph}</span>)}
+          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
         </div>}
         <div className="box-keys">
           {LETTER_BOX.map(k => <button key={k.id} className={`box-key tahriri ${boxKey === k.id ? 'active' : ''} ${k.lesson > lessonOrder ? 'later' : ''}`} onClick={() => { setBoxKey(k.id); sound.playPop(); }}>
-            {k.pieces.map(t => parseToken(t).glyph).join(' ')}
+            {k.pieces.map(t => kidGlyph(parseToken(t).glyph)).join(' ')}
           </button>)}
         </div>
       </section>

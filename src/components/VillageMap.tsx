@@ -11,13 +11,14 @@ import { MapSpot } from './shared/MapSpot';
 import { CloseArt, OkArt } from './shared/ArtButtons';
 
 export interface MapProps { onNavigate:(screen:ActiveScreen)=>void; onVillage:(v:'recognition'|'word'|'sentence')=>void; onSubject:()=>void; }
+/* چینش از بالا به پایین: دهکدهٔ اول بالای نقشه، دهکدهٔ سوم پایین (هر جزیره با همان نقاشیِ جای خودش) */
 const villages = [
-  { id:'recognition' as const, title:'آشنایی با حروف', subtitle:'ببین، بشنو و کشف کن', asset:'/assets/map-island-3.webp', tone:'coral', text:'در این دهکده با شکل و صدای حروف فارسی آشنا می‌شوی و تمرین می‌کنی آن‌ها را درست تشخیص بدهی.',
-    place:{ left:29.57, top:61.78, w:73.03, ratio:1, bb:[22.7,73.5,13.3,91.2] as [number,number,number,number] } },
+  { id:'recognition' as const, title:'آشنایی با حروف', subtitle:'ببین، بشنو و کشف کن', asset:'/assets/map-island-1.webp', tone:'coral', text:'در این دهکده با شکل و صدای حروف فارسی آشنا می‌شوی و تمرین می‌کنی آن‌ها را درست تشخیص بدهی.',
+    place:{ left:24.38, top:4.14, w:41.94, ratio:1, bb:[16.2,85.7,11.5,88.8] as [number,number,number,number] } },
   { id:'word' as const, title:'کلمه‌نویسی', subtitle:'با حروف کلمه بساز', asset:'/assets/map-island-2.webp', tone:'green', text:'اینجا حروف را کنار هم می‌گذاری و با آن‌ها کلمه‌های تازه می‌سازی.',
     place:{ left:17.40, top:29.45, w:63.02, ratio:1, bb:[21.3,76.3,18.2,88.5] as [number,number,number,number] } },
-  { id:'sentence' as const, title:'جمله‌سازی', subtitle:'با کلمه‌ها جمله بساز', asset:'/assets/map-island-1.webp', tone:'blue', text:'در این دهکده کلمه‌ها را مرتب می‌کنی و جمله‌های کوتاه و درست می‌سازی.',
-    place:{ left:24.38, top:4.14, w:41.94, ratio:1, bb:[16.2,85.7,11.5,88.8] as [number,number,number,number] } },
+  { id:'sentence' as const, title:'جمله‌سازی', subtitle:'با کلمه‌ها جمله بساز', asset:'/assets/map-island-3.webp', tone:'blue', text:'در این دهکده کلمه‌ها را مرتب می‌کنی و جمله‌های کوتاه و درست می‌سازی.',
+    place:{ left:29.57, top:61.78, w:73.03, ratio:1, bb:[22.7,73.5,13.3,91.2] as [number,number,number,number] } },
 ];
 
 export const VillageMap: React.FC<MapProps> = ({onNavigate,onVillage,onSubject}) => {
@@ -46,7 +47,8 @@ export const VillageMap: React.FC<MapProps> = ({onNavigate,onVillage,onSubject})
       </section>
     </div>}
   </>}>
-    {villages.map((v,index)=><MapSpot key={v.id} place={v.place} art={v.asset} index={index} title={v.title} subtitle={v.subtitle} tone={v.tone} hint={index===0}
+    {/* از پایین به بالا در DOM تا لایه‌بندیِ هم‌پوشانیِ جزیره‌ها مثل قبل بماند */}
+    {villages.map((v,index)=>({v,index})).reverse().map(({v,index})=><MapSpot key={v.id} place={v.place} art={v.asset} index={index} title={v.title} subtitle={v.subtitle} tone={v.tone} hint={index===0}
       onClick={()=>{sound.playPop();onVillage(v.id)}} />)}
   </MapScreen>;
 };

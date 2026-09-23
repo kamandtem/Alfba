@@ -163,10 +163,10 @@ export function wordToTokens(word: string): string[] {
 }
 
 const LETTER_LESSON: Record<string, number> = {
-  'آ': 1, 'ا': 1, 'ب': 2, 'د': 4, 'م': 5, 'س': 6, 'ت': 8, 'ر': 9, 'ن': 10, 'ش': 12, 'ز': 14, 'ک': 17,
+  'آ': 1, 'ا': 1, 'ب': 2, 'د': 4, 'م': 5, 'س': 6, 'ت': 8, 'ر': 9, 'ن': 10, 'ز': 12, 'ش': 14, 'ک': 17,
   'پ': 19, 'گ': 20, 'ف': 21, 'خ': 22, 'ق': 23, 'ل': 24, 'ج': 25, 'چ': 28, 'ژ': 29,
-  'ع': 32, 'ص': 33, 'ذ': 34, 'ث': 35, 'ح': 36, 'ض': 37, 'ط': 38, 'غ': 39, 'ظ': 40,
-  'َ': 3, 'ِ': 11, 'ُ': 16, 'ّ': 31,
+  'ص': 32, 'ذ': 33, 'ع': 34, 'ث': 35, 'ح': 36, 'ض': 37, 'ط': 38, 'غ': 39, 'ظ': 40,
+  'َ': 3, 'ِ': 13, 'ُ': 16, 'ّ': 31,
 };
 /** واژه‌هایی که «و» در آن‌ها صدای «اُ» می‌دهد (درس ۲۶) */
 const O_WORDS = new Set(['تو', 'دو', 'خود', 'خودکار', 'خورشید', 'خوش', 'خوشحال', 'خوشبو', 'خوراک']);
@@ -184,7 +184,7 @@ export function lessonOfWord(word: string): number {
     if (c === ZWNJ) continue;
     if (LETTER_LESSON[c] !== undefined) bump(LETTER_LESSON[c]);
     if (c === 'ا' && atStart && next === 'و') bump(7);
-    if (c === 'ا' && atStart && next === 'ی') bump(13);
+    if (c === 'ا' && atStart && next === 'ی') bump(11);
     if (c === 'و') {
       if (O_WORDS.has(plain)) bump(26);
       else if (prev === 'خ' && next === 'ا') bump(30);
@@ -194,11 +194,11 @@ export function lessonOfWord(word: string): number {
     if (c === 'ی') {
       if (i === 1 && chars[0] === 'ا') { /* «ای» اول کلمه */ }
       else if (atStart || next === 'َ' || next === 'ِ' || next === 'ُ' || prev === 'َ' || ((prev === 'ا' || prev === 'و') && isLetter(next))) bump(15);
-      else bump(13);
+      else bump(11);
     }
     if (c === 'ه') {
       const isFinal = !chars.slice(i + 1).some(isLetter);
-      if (isFinal && isLetter(prev) && !['ا', 'و'].includes(prev!) && i > 1) bump(11);
+      if (isFinal && isLetter(prev) && !['ا', 'و'].includes(prev!) && i > 1) bump(13);
       else bump(27);
     }
   }

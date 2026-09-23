@@ -15,14 +15,15 @@ import { CloseArt, OkArt } from './shared/ArtButtons';
 
 type Place = { left: number; top: number; w: number; ratio: number; bb: [number, number, number, number] };
 const HR = 258 / 246;
-/* مسیر از پایین (خانهٔ شروع روی سکو) به بالا می‌رود؛ جای هر خانه دقیقاً مطابق تصویر مرجع است */
+/* چینش از بالا به پایین: «بازی اول» بالاترین خانه است و خانهٔ درس‌ها پایینِ مسیر (روی سکو).
+   جای هر خانه و نقاشیِ همان جا دقیقاً مطابق تصویر مرجع مانده؛ فقط ترتیب بازی‌ها برعکس شده است. */
 const houses = [
-  { id: 'trace' as const, title: 'بازی اول', subtitle: 'روی نشانه دست بکش', emoji: '✍️', asset: '/assets/letters-house-1.webp', tone: 'coral', place: { left: 41.13, top: 75.40, w: 43.56, ratio: HR, bb: [16.0, 89.0, 23.2, 75.8] } as Place },
-  { id: 'hunt' as const, title: 'بازی دوم', subtitle: 'حرف را پیدا کن', emoji: '🔎', asset: '/assets/letters-house-2.webp', tone: 'green', place: { left: 41.24, top: 54.56, w: 43.76, ratio: HR, bb: [11.0, 87.3, 17.3, 73.9] } as Place },
+  { id: 'trace' as const, title: 'بازی اول', subtitle: 'روی نشانه دست بکش', emoji: '✍️', asset: '/assets/letters-house-4.webp', tone: 'coral', place: { left: 23.70, top: 5.92, w: 44.46, ratio: HR, bb: [19.2, 80.0, 22.1, 70.1] } as Place },
+  { id: 'hunt' as const, title: 'بازی دوم', subtitle: 'حرف را پیدا کن', emoji: '🔎', asset: '/assets/letters-house-3.webp', tone: 'green', place: { left: 43.11, top: 22.66, w: 44.12, ratio: HR, bb: [19.0, 75.7, 9.7, 79.2] } as Place },
   { id: 'like' as const, title: 'بازی سوم', subtitle: 'چی مثلِ چی؟', emoji: '🧩', asset: '/assets/letters-house-5.webp', tone: 'blue', place: { left: 21.16, top: 37.86, w: 44.31, ratio: HR, bb: [20.0, 82.2, 10.0, 90.6] } as Place },
-  { id: 'flash' as const, title: 'بازی چهارم', subtitle: 'فلش‌کارت', emoji: '🃏', asset: '/assets/letters-house-3.webp', tone: 'violet', place: { left: 43.11, top: 22.66, w: 44.12, ratio: HR, bb: [19.0, 75.7, 9.7, 79.2] } as Place },
+  { id: 'flash' as const, title: 'بازی چهارم', subtitle: 'فلش‌کارت', emoji: '🃏', asset: '/assets/letters-house-2.webp', tone: 'violet', place: { left: 41.24, top: 54.56, w: 43.76, ratio: HR, bb: [11.0, 87.3, 17.3, 73.9] } as Place },
 ] as const;
-const LESSON_HOUSE = { asset: '/assets/letters-house-4.webp', place: { left: 23.70, top: 5.92, w: 44.46, ratio: HR, bb: [19.2, 80.0, 22.1, 70.1] } as Place };
+const LESSON_HOUSE = { asset: '/assets/letters-house-1.webp', place: { left: 41.13, top: 75.40, w: 43.56, ratio: HR, bb: [16.0, 89.0, 23.2, 75.8] } as Place };
 type House = typeof houses[number]['id'];
 
 export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => void; onComplete: (t: 'letter' | 'word', id?: string) => void }> = ({ onBack, onHome, onComplete }) => {
@@ -68,8 +69,9 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
       <div className="letters-help-list">{houses.map((h, i) => <button key={h.id} onClick={() => { setHelpOpen(false); chooseHouse(h.id); }}><span>{toFa(i + 1)}</span><b>{h.title}</b><small>{h.subtitle}</small></button>)}</div>
     </section></div>}
   </>}>
-    {houses.map((h, i) => <MapSpot key={h.id} place={h.place} art={h.asset} index={i} title={h.title} subtitle={h.subtitle} tone={h.tone} hint={i === 0} onClick={() => chooseHouse(h.id)} />)}
+    {/* از پایین به بالا در DOM تا لایه‌بندیِ هم‌پوشانیِ خانه‌ها مثل قبل بماند */}
     <MapSpot place={LESSON_HOUSE.place} art={LESSON_HOUSE.asset} index={4} title="خانهٔ درس‌ها" subtitle="درس را انتخاب کن" tone="sun" badge="📅" onClick={() => { sound.playPop(); setLessonsOpen(true); }} />
+    {houses.map((h, i) => ({ h, i })).reverse().map(({ h, i }) => <MapSpot key={h.id} place={h.place} art={h.asset} index={i} title={h.title} subtitle={h.subtitle} tone={h.tone} hint={i === 0} onClick={() => chooseHouse(h.id)} />)}
   </MapScreen>;
 };
 

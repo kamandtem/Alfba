@@ -5,7 +5,39 @@
  */
 import { lessonOfWord, plainWord, wordToTokens } from '../utils/pieces';
 
-export interface WordEntry { id: string; word: string; plain: string; emoji: string; lesson: number; tokens: string[] }
+import { bookLessonOf } from './curriculum';
+
+export interface WordEntry { id: string; word: string; plain: string; emoji: string; lesson: number; tokens: string[]; /** شمارهٔ درس کتاب نگارش که این واژه در آن آمده */ book?: number }
+/**
+ * واژه‌های هر درسِ کتاب «نگارش فارسی اول دبستان» (۱۴۰۴)، به همان ترتیبی که در صفحه‌های «بنویس / کامل کن» آمده‌اند.
+ * تمرین‌های هر درس اول از همین واژه‌ها ساخته می‌شوند. واژه‌ای که نشانهٔ آموزش‌داده‌نشده دارد
+ * (مثلاً «اَمین» در درس ۲) خودکار تا درسِ مناسبِ خودش عقب می‌افتد.
+ */
+const BOOK_RAW: Record<number, string> = {
+  1: `آب|💧 بابا|👨 با`,
+  2: `باد|🌬️ داد دَر|🚪 اَبر|☁️ بَد`,
+  3: `بام|🏠 دام بادام|🌰 آمَد آدَم|🧑 سَبَد|🧺 اَسب|🐎 سام سَد`,
+  4: `بو|👃 سو بود سود مو|💇 دود|💨 تاب|🎠 دَست|✋ دوست|🤝 اَست بَست ماست|🥛 توت|🍓`,
+  5: `مادَر|👩 اَبرو|🤨 سَرد|🥶 دَرس|📚 آرام سارا|👧 بَرادَر|👦 نان|🍞 باران|🌧️ آسمان|🌌 اَنار دَندان|🦷 آبان مَن|🙋`,
+  6: `سیب|🍎 بیدار ایستاد ایران|🇮🇷 ایرانی اَمیر|👦 سینی|🍽️ آبی|🔵 سَرباز|💂 زود سَبز|🟢 آزاد زَمین|🌍 زیبا|🌸 زَرد|🟡 میز|🪑 زَنبور|🐝 سوزَن|🪡`,
+  7: `اِمام ساده دانه|🌱 مِداد|✏️ اِنسان تازه دَبِستان|🏫 مَدرِسه|🏫 نَرده شَب|🌙 آش|🍲 شیر|🦁 تَراش|✏️ شانه|🪮 آتَش|🔥 نامه|✉️ سِتاره|⭐ رِشته ماشین|🚗 شیرین`,
+  8: `یاس|🌼 دَریا|🌊 سایه|🌳 مِیمون|🐒 اُمید تُند مُدیر|🧑‍🏫 دُرُست|✅ شُتُر|🐫 بُز|🐐 دُرُشت دُم`,
+  9: `کَبوتَر|🕊️ اُردَک|🦆 کَندو|🍯 کودَک|🧒 بادبادَک|🪁 کَباب|🍢 کُمُد|🗄️ کَریم وَرزِش|🏃 دَوَنده|🏃 سَوارکار|🏇 سَماوَر|🫖 نانوا|👨‍🍳 میوه|🍎`,
+  10: `پَرواز|🕊️ پَرَستو|🐦 پَروانه|🦋 توپ|⚽ می‌پَزَد پَرَنده|🐦 پِدَر|👨 پَنیر|🧀 اَنگور|🍇 سَگ|🐕 زَنگ|🔔 گُرگ|🐺 بَرگ|🍃 گُربه|🐈 نَرگِس|🌼 بُزُرگ|🐘 آموزگار|👩‍🏫`,
+  11: `بَرف|❄️ کیف|🎒 آفتابی|☀️ دَفتَر|📓 کَفش|👟 فَرزانه|👧 فِرِشته|👧 خُدا خوب|👍 دِرَخت|🌳 رودخانه|🏞️ خُروس|🐓 خَرگوش|🐰 خانه|🏠 شاخه|🌿`,
+  12: `اُتاق|🚪 قاشُق|🥄 بُشقاب|🍽️ قوری|🫖 قایِق|⛵ قَندان|🍬 لانه|🪺 بُلبُل|🐦 گُل|🌸 لَبخَند|😊 فیل|🐘 سَلام|👋`,
+  13: `بِرِنج|🍚 جوجه|🐥 نارِنج|🍊 گُنجِشک|🐦 مَسجِد|🕌 جوراب|🧦 کاج|🌲 جارو|🧹 خورشید|☀️ نوروز|🌷 خود می‌خورَد دو|2️⃣ خودکار|🖊️`,
+  14: `مَهتاب|🌙 هَوا|🌬️ مِهرَبان|🥰 آهو|🦌 ماه|🌙 کوه|⛰️ چوپان|🧑‍🌾 قوچ|🐏 چِشمه|⛲ چَراگاه|🌾 می‌چَرَند قارچ|🍄 پَرچَم|🇮🇷 ماهی|🐟`,
+  15: `ژاله|💧 مَنیژه|👧 بیژَن|👦 مُژده ماژیک|🖍️ ژاکَت|🧥 پَژمُرده|🥀 خواهَر|👧 خواب|😴 خوابید خواندَن|📖 می‌خوانَد`,
+  16: `نَجّار|🧑‍🔧 کَفّاش|👞 قَنّاد|🍰 تَشَکُّر|🙏 بَنّا|🧱 نَقّاش|🎨 اَوَّل|🥇`,
+  17: `صِدا|🔊 صاف صَدَف|🐚 صورَت|🙂 صابون|🧼 صَندوق|🧰 فَصل|🍂 گُذَشته اَذان|🕌 لَذَّت آذَر|🍂`,
+  18: `عَلی|👦 مُعَلِّم|👩‍🏫 جَمع شُروع عَزیز|💛 مَعصومه|👧 عَمو|👨 عید|🎁 مَزرَعه|🌾 ثُرَیّا|👧 مِثل ثانیه|⏱️ کَثیف|🗑️ لِثه|🦷`,
+  19: `حَلَزون|🐌 اِحساس حَرَکَت|🏃 صُبح|🌅 حِیوان|🐾 حوله|🧺 مُحَمَّد|👦 خوشحال|😄`,
+  20: `حوض|⛲ مَریض|🤒 بَعضی وُضو|💧 رِضا|👦 حَیاط|🏡 خاطِرات اِنقِلاب قَطار|🚂 وَطَن|🇮🇷 طوطی|🦜 طَناب|🪢`,
+  21: `مُرغابی|🦆 کَلاغ|🐦‍⬛ جیغ|😱 جُغد|🦉 تیغ|🌵`,
+  22: `اَعظَم|👧 ظُلم مُواظِب ناظِم|🧑‍🏫 نَظم خُداحافِظی|👋`,
+};
+
 
 const RAW = `
 آب|💧 بابا|👨 باب
@@ -48,23 +80,79 @@ const RAW = `
 ظَرف|🥣 ظُهر|🕛 حافِظ|📜 مُحافِظ|💂 لَحظه|⏳ مَنظَره|🏞️
 `;
 
-export const WORD_BANK: WordEntry[] = RAW.split(/\s+/).filter(Boolean).map((item, i) => {
-  const [word, emoji = ''] = item.split('|');
-  return { id: `w${i}`, word, plain: plainWord(word), emoji, lesson: lessonOfWord(word), tokens: wordToTokens(word) };
-});
+const parseItem = (item: string) => { const [word, emoji = ''] = item.split('|'); return { word, emoji }; };
+/** واژه‌های کتاب اول (به ترتیب درس)، بعد بقیهٔ واژه‌ها؛ هر واژه فقط یک بار */
+const buildBank = (): WordEntry[] => {
+  const out: WordEntry[] = [];
+  const seen = new Map<string, WordEntry>();
+  const add = (item: string, book?: number) => {
+    const { word, emoji } = parseItem(item);
+    const plain = plainWord(word);
+    const old = seen.get(plain);
+    if (old) { if (!old.emoji && emoji) old.emoji = emoji; if (book && !old.book) old.book = book; return; }
+    const e: WordEntry = { id: `w${out.length}`, word, plain, emoji, lesson: lessonOfWord(word), tokens: wordToTokens(word), book };
+    seen.set(plain, e); out.push(e);
+  };
+  Object.keys(BOOK_RAW).map(Number).sort((a, b) => a - b).forEach(b => BOOK_RAW[b].split(/\s+/).filter(Boolean).forEach(it => add(it, b)));
+  RAW.split(/\s+/).filter(Boolean).forEach(it => add(it));
+  return out;
+};
+export const WORD_BANK: WordEntry[] = buildBank();
 
 export const wordsUpTo = (lesson: number) => WORD_BANK.filter(w => w.lesson <= lesson);
-/** واژه‌های تازهٔ یک درس؛ اگر کم بود از درس‌های قبل تکمیل می‌شود */
+/**
+ * واژه‌های تمرینِ یک درس:
+ * ۱) واژه‌های همان درسِ کتاب نگارش که همهٔ نشانه‌هایشان تا این نشانه خوانده شده
+ * ۲) واژه‌های تازهٔ همین نشانه از بانک
+ * ۳) اگر کم بود، واژه‌های درس‌های قبلی کتاب (نزدیک‌ترین درس اول)
+ */
 export function lessonWords(lesson: number, min = 6): WordEntry[] {
-  const exact = WORD_BANK.filter(w => w.lesson === lesson);
-  if (exact.length >= min) return exact;
-  const earlier = WORD_BANK.filter(w => w.lesson < lesson).sort((a, b) => b.lesson - a.lesson);
-  return [...exact, ...earlier].slice(0, Math.max(min, exact.length));
+  const book = bookLessonOf(lesson);
+  const list: WordEntry[] = [];
+  const push = (w: WordEntry) => { if (!list.includes(w)) list.push(w); };
+  WORD_BANK.filter(w => w.book === book && w.lesson <= lesson).forEach(push);
+  WORD_BANK.filter(w => w.book && w.book < book && w.lesson === lesson).forEach(push);
+  WORD_BANK.filter(w => !w.book && w.lesson === lesson).forEach(push);
+  if (list.length < min) WORD_BANK.filter(w => w.book && w.book < book && w.lesson <= lesson).sort((a, b) => (b.book! - a.book!)).forEach(w => { if (list.length < min) push(w); });
+  if (list.length < min) WORD_BANK.filter(w => w.lesson < lesson).sort((a, b) => b.lesson - a.lesson).forEach(w => { if (list.length < min) push(w); });
+  return list;
 }
 export const findWord = (plain: string) => WORD_BANK.find(w => w.plain === plain);
 
 /** جمله‌های ساده کتابی؛ درسِ هر جمله از روی واژه‌هایش محاسبه می‌شود */
 const SENTENCE_RAW = `
+بابا آب
+بابا آب داد
+اَسب آمَد
+بابا بادام داد
+بابا تاب بَست
+او با اَسب آمَد
+او دَست داد
+مادَر آرام آمَد
+سارا بَرادَر دارَد
+مَن اَنار دارَم
+مَن دَرس دارَم
+مادَر دَر دَست نان دارَد
+اَبر دَر آسمان اَست
+ایرانی آزاد اَست
+ایران سَرسَبز اَست
+ما ایران را دوست داریم
+شَب بود
+مادَر یاس دَر دَست دارَد
+باران تُند آمَد
+اُمید دَر باران آمَد
+زَنبور دَر کَندو اَست
+کَبوتَر روی بام اَست
+اَمیر دَوَنده اَست
+کَریم سَوارکار اَست
+پِدَر پَروانه نانوا اَست
+نَرگِس مادَربُزُرگ دارَد
+بَرف می‌بارَد
+آسمان آفتابی نیست
+خُروس خوش‌آواز اَست
+بُلبُل آمَد
+گُل لَبخَند زَد
+مَهتاب زیبا اَست
 بابا آمَد
 بابا آب داد
 مادَر آمَد
@@ -149,5 +237,5 @@ const SENTENCE_RAW = `
 ظُهر شُد
 `;
 export interface SentenceEntry { id: string; text: string; lesson: number }
-export const SENTENCE_BANK: SentenceEntry[] = SENTENCE_RAW.split('\n').map(s => s.trim()).filter(Boolean)
+export const SENTENCE_BANK: SentenceEntry[] = [...new Set(SENTENCE_RAW.split('\n').map(s => s.trim()).filter(Boolean))]
   .map((text, i) => ({ id: `s${i}`, text, lesson: Math.max(...text.split(' ').map(lessonOfWord)) }));
