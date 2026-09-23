@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Check, Eraser, Flag, Package, RefreshCw, Undo2, Volume2, X } from 'lucide-react';
+import { Eraser, Flag, Package, RefreshCw, Undo2, Volume2 } from 'lucide-react';
 import { CURRICULUM, LETTER_BOX } from '../data/curriculum';
 import { findWord, lessonWords, WordEntry, wordsUpTo } from '../data/wordBank';
 import { finishProblem, parseToken, plainSequence, renderSequence, validateSequence } from '../utils/pieces';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
 import { LessonPicker } from './shared/LessonPicker';
+import { GameHeader } from './shared/GameHeader';
+import { useBackHandler } from '../utils/backNav';
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
+import { CloseArt, OkArt } from './shared/ArtButtons';
 
 type Mode = 'lesson' | 'suggest' | 'free';
 interface FreePiece { id: string; token: string; x: number; y: number }
@@ -219,16 +222,15 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   };
 
   const dragFreeId = drag?.kind === 'free' && drag.moved ? drag.id : null;
+  useBackHandler(() => { if (boxOpen) { setBoxOpen(false); return; } onBack(); });
   const dragWord = drag?.kind === 'word' && drag.moved ? drag : null;
   const boardRect = boardRef.current?.getBoundingClientRect();
   const hoverLine = !!drag && !!boardRect && drag.kind !== 'word' && onLine(drag.cy - boardRect.top);
 
   return <main className="word-village" dir="rtl">
-    <header className="village-page-header">
-      <button onClick={onBack} aria-label="بازگشت">›</button>
-      <div><span>دهکده دوم</span><h1>کلمه‌نویسی</h1></div>
+    <GameHeader kicker="دهکدهٔ دوم" title="کلمه‌نویسی" emoji="🧲" tone="mint" onBack={onBack}>
       <LessonPicker compact />
-    </header>
+    </GameHeader>
     <nav className="wv-modes">
       {([['lesson', 'کلمه‌های درس'], ['suggest', 'پیشنهاد کلمه'], ['free', 'نوشتن آزاد']] as [Mode, string][]).map(([m, label]) =>
         <button key={m} className={mode === m ? 'active' : ''} onClick={() => { setMode(m); sound.playPop(); }}>{label}</button>)}
@@ -267,12 +269,12 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     <footer className="wv-actions">
       {mode !== 'lesson' && <button className="wv-box-btn" onClick={() => { setBoxOpen(o => !o); setBoxKey(null); sound.playPop(); }}><Package /> جعبهٔ حروف</button>}
       <button className="soft-btn" onClick={clearAll}><Eraser /> از اول</button>
-      <button className="big-done" onClick={finish}>{mode === 'free' ? <><Flag /> پایان</> : <><Check /> تایید</>}</button>
+      {mode === 'free' ? <button className="big-done" onClick={finish}><Flag /> پایان</button> : <OkArt className="wv-ok" onClick={finish} />}
     </footer>
 
     {boxOpen && <div className="letter-box-backdrop" onClick={() => setBoxOpen(false)}>
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
-        <header><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلی را که می‌خواهی روی تخته بکش</small><button onClick={() => setBoxOpen(false)} aria-label="بستن"><X /></button></header>
+        <header><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلی را که می‌خواهی روی تخته بکش</small><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
         {boxKey && <div className="box-forms">
           {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{parseToken(t).glyph}</span>)}
         </div>}

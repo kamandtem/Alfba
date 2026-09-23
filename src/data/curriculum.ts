@@ -14,6 +14,16 @@ export const G = {
   mark: (m: string) => 'ـ' + m,
 };
 
+/**
+ * شکل آغازینِ کودکانه برای «بـ نـ مـ هـ»
+ * این‌ها glyph‌های خود فونت تحریری‌اند (هیچ شکلی از فونت تغییر نکرده)؛
+ * فقط به نسخه‌های کشیده‌تر و خواناتر (هـ دوچشم کتاب، نــ و بــ و مــ کمی کشیده) یک کد اختصاصی داده شده.
+ * اگر روزی خواستید به حالت قبل برگردید، کافی است KID_INIT را خالی کنید.
+ */
+export const KID_INIT: Record<string, string> = { 'ب': '\uE101', 'ن': '\uE102', 'م': '\uE103', 'ه': '\uE104' };
+/** فقط برای نمایش: شکل آغازین این چهار نشانه را با نسخهٔ کودکانه عوض می‌کند */
+export const kidDisplay = (text: string) => text.replace(/(^|\s)([بنمه])[\u200D\u0640](?=\s|$)/g, (m, sp: string, c: string) => sp + (KID_INIT[c] || m.slice(sp.length)));
+
 export interface LikeWord { word: string; emoji: string }
 
 export interface CurriculumLesson {
@@ -87,6 +97,8 @@ const RAW = [
 
 export const CURRICULUM: CurriculumLesson[] = RAW.map(r => ({
   ...r,
+  sign: kidDisplay(r.sign),
+  forms: r.forms.map(kidDisplay),
   id: `l${String(r.order).padStart(2, '0')}`,
   part: r.order <= 31 ? 1 : 2,
   // سه هفته اول مهر: نگاره‌ها. نشانه‌های ۱ تا پایان بهمن، نشانه‌های ۲ در اسفند.

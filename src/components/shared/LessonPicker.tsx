@@ -1,18 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { CURRICULUM, lessonForToday, weekLabel } from '../../data/curriculum';
 import { toFa, useCurrentLesson } from '../../utils/lessonState';
 import { sound } from '../../utils/audio';
+import { useBackHandler } from '../../utils/backNav';
+import { CloseArt } from './ArtButtons';
 
-/** انتخاب درس بر اساس سرفصل کتاب؛ درس پیشنهادی امروز با ستاره مشخص است */
-export const LessonPicker: React.FC<{ compact?: boolean }> = ({ compact }) => {
+/** پنجرهٔ انتخاب درس (کاشی‌های رنگی به ترتیب کتاب) */
+export const LessonSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [lesson, setLesson] = useCurrentLesson();
   const today = lessonForToday();
+  useBackHandler(() => { onClose(); }, open);
+  if (!open) return null;
+  return <div className="kid-sheet-backdrop" onClick={onClose}>
+    <section className="kid-sheet" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+      <span className="kid-sheet-grip" aria-hidden="true" />
+      <header>
+        <div><b>کدام درس؟</b><small>درسی را که در کلاس خوانده‌ای انتخاب کن</small></div>
+        <CloseArt className="sheet-close" onClick={onClose} />
+      </header>
+      <div className="lesson-tiles">
+        {CURRICULUM.map(l => <button key={l.id}
+          className={`lesson-tile ${l.order === lesson ? 'active' : ''} ${l.order < lesson ? 'done' : ''} ${l.part === 2 ? 'part2' : ''}`}
+          onClick={() => { setLesson(l.order); sound.playPop(); sound.speakPersian(`نشانهٔ ${l.spoken}`); window.setTimeout(onClose, 180); }}>
+          <span className="lesson-tile-num">{toFa(l.order)}</span>
+          <b className="tahriri">{l.sign}</b>
+          <small>{weekLabel(l.week)}</small>
+          {l.order === today && <em>امروز ⭐</em>}
+        </button>)}
+      </div>
+    </section>
+  </div>;
+};
+
+/** دکمهٔ انتخاب درس بر اساس سرفصل کتاب */
+export const LessonPicker: React.FC<{ compact?: boolean }> = ({ compact }) => {
+  const [lesson] = useCurrentLesson();
+  const [open, setOpen] = useState(false);
   const current = CURRICULUM[lesson - 1];
-  return <label className={`lesson-select ${compact ? 'compact' : ''}`}>
-    <span>درس</span>
-    <select value={lesson} onChange={e => { const n = Number(e.target.value); setLesson(n); sound.speakPersian(`نشانهٔ ${CURRICULUM[n - 1].spoken}`); }}>
-      {CURRICULUM.map(l => <option key={l.id} value={l.order}>{toFa(l.order)}. {l.sign}{l.order === today ? ' ⭐' : ''}</option>)}
-    </select>
-    {!compact && <small>{current.part === 1 ? 'نشانه‌ها ۱' : 'نشانه‌ها ۲'} · {weekLabel(current.week)}</small>}
-  </label>;
+  return <>
+    <button className={`lesson-pill ${compact ? 'compact' : ''}`} onClick={() => { sound.playPop(); setOpen(true); }} aria-label="انتخاب درس">
+      <span className="lesson-pill-sign tahriri">{current.sign}</span>
+      <span className="lesson-pill-text"><b>درس {toFa(lesson)}</b>{!compact && <small>{current.part === 1 ? 'نشانه‌ها ۱' : 'نشانه‌ها ۲'} · {weekLabel(current.week)}</small>}</span>
+      <ChevronDown className="lesson-pill-caret" strokeWidth={3} />
+    </button>
+    <LessonSheet open={open} onClose={() => setOpen(false)} />
+  </>;
 };

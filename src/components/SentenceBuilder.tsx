@@ -5,6 +5,9 @@ import { CURRICULUM } from '../data/curriculum';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
 import { LessonPicker } from './shared/LessonPicker';
+import { GameHeader } from './shared/GameHeader';
+import { useBackHandler } from '../utils/backNav';
+import { OkArt } from './shared/ArtButtons';
 
 const plain = (s: string) => s.replace(/[\u064B-\u0652]/g, '');
 
@@ -19,6 +22,7 @@ export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'wo
   const words = useMemo(() => sentence ? sentence.text.split(' ') : [], [sentence]);
   const shuffled = useMemo(() => { let s = shuffle(words.map((_, i) => i)); if (words.length > 1 && s.every((v, i) => v === i)) s = s.reverse(); return s; }, [words]);
   useEffect(() => { setOrder([]); setResult('idle'); }, [sentence?.id]);
+  useBackHandler(() => { onBack(); });
   const reset = () => { setOrder([]); setResult('idle'); };
   const check = () => {
     if (!sentence) return;
@@ -28,14 +32,14 @@ export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'wo
     else sound.speakPersian('نزدیک بودی، دوباره امتحان کن');
   };
   return <main className="sentence-screen" dir="rtl">
-    <header className="village-page-header"><button onClick={onBack} aria-label="بازگشت">›</button><div><span>دهکده سوم</span><h1>جمله‌سازی</h1></div><LessonPicker compact /></header>
+    <GameHeader kicker="دهکدهٔ سوم" title="جمله‌سازی" emoji="💬" tone="sky" onBack={onBack}><LessonPicker compact /></GameHeader>
     {!sentence ? <section className="sentence-workspace"><div className="sentence-prompt"><h2>هنوز زود است!</h2><p>جمله‌سازی از درس {toFa(4)} (نشانهٔ «د») شروع می‌شود. درس را از بالا عوض کن.</p></div></section> :
       <section className="sentence-workspace">
         <div className="sentence-prompt"><span>جمله {toFa(index % pool.length + 1)} از {toFa(pool.length)} · تا نشانهٔ «{CURRICULUM[lessonOrder - 1].sign}»</span><h2>کلمه‌ها را به ترتیب بچین</h2><p>روی کلمه‌ها به ترتیب بزن تا جمله ساخته شود.</p>
           <button className="speak-top" onClick={() => sound.speakPersian(plain(sentence.text))} aria-label="شنیدن جمله"><Volume2 /></button></div>
         <div className={`sentence-answer ${result}`}>{order.length ? order.map((wi, i) => <button key={`${wi}-${i}`} className="tahriri" onClick={() => { setOrder(o => o.filter((_, j) => j !== i)); setResult('idle'); }}>{words[wi]}</button>) : <span>کلمه‌ها اینجا کنار هم می‌نشینند</span>}</div>
         <div className="sentence-words">{shuffled.filter(i => !order.includes(i)).map(i => <button key={i} className="tahriri" onClick={() => { setOrder(o => [...o, i]); sound.playPop(); }}>{words[i]}</button>)}</div>
-        <div className="sentence-actions"><button onClick={reset}><RotateCcw /> از اول</button><button className="check-sentence" onClick={check}>تایید <Check /></button></div>
+        <div className="sentence-actions"><button onClick={reset}><RotateCcw /> از اول</button><OkArt className="sentence-ok" onClick={check} /></div>
         {result === 'good' && <div className="feedback good"><Check /> آفرین! جمله را درست ساختی.</div>}
         {result === 'try' && <div className="feedback try"><X /> هنوز درست نشده؛ تو می‌توانی، یک بار دیگر.</div>}
       </section>}

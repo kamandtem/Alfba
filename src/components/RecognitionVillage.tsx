@@ -1,38 +1,50 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Eraser, RefreshCw, Volume2, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Eraser, RefreshCw, Volume2 } from 'lucide-react';
 import { CURRICULUM, CurriculumLesson, LikeWord } from '../data/curriculum';
 import { WORD_BANK } from '../data/wordBank';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
-import { LessonPicker } from './shared/LessonPicker';
+import { LessonPicker, LessonSheet } from './shared/LessonPicker';
+import { GameHeader } from './shared/GameHeader';
+import { MapScreen } from './shared/MapScreen';
+import { MapSpot } from './shared/MapSpot';
+import { useBackHandler } from '../utils/backNav';
+import { setStatusBarColor, vibrate } from '../utils/native';
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
+import { CloseArt, OkArt } from './shared/ArtButtons';
 
+type Place = { left: number; top: number; w: number; ratio: number; bb: [number, number, number, number] };
+const HR = 258 / 246;
+/* مسیر از پایین (خانهٔ شروع روی سکو) به بالا می‌رود؛ جای هر خانه دقیقاً مطابق تصویر مرجع است */
 const houses = [
-  { id: 'trace' as const, title: 'بازی اول', subtitle: 'روی نشانه دست بکش', asset: '/assets/letters-house-1.svg' },
-  { id: 'hunt' as const, title: 'بازی دوم', subtitle: 'حرف را پیدا کن', asset: '/assets/letters-house-2.svg' },
-  { id: 'like' as const, title: 'بازی سوم', subtitle: 'چی مثلِ چی؟', asset: '/assets/letters-house-3.svg' },
-  { id: 'flash' as const, title: 'بازی چهارم', subtitle: 'فلش‌کارت', asset: '/assets/letters-house-4.svg' },
+  { id: 'trace' as const, title: 'بازی اول', subtitle: 'روی نشانه دست بکش', emoji: '✍️', asset: '/assets/letters-house-1.webp', tone: 'coral', place: { left: 41.13, top: 75.40, w: 43.56, ratio: HR, bb: [16.0, 89.0, 23.2, 75.8] } as Place },
+  { id: 'hunt' as const, title: 'بازی دوم', subtitle: 'حرف را پیدا کن', emoji: '🔎', asset: '/assets/letters-house-2.webp', tone: 'green', place: { left: 41.24, top: 54.56, w: 43.76, ratio: HR, bb: [11.0, 87.3, 17.3, 73.9] } as Place },
+  { id: 'like' as const, title: 'بازی سوم', subtitle: 'چی مثلِ چی؟', emoji: '🧩', asset: '/assets/letters-house-5.webp', tone: 'blue', place: { left: 21.16, top: 37.86, w: 44.31, ratio: HR, bb: [20.0, 82.2, 10.0, 90.6] } as Place },
+  { id: 'flash' as const, title: 'بازی چهارم', subtitle: 'فلش‌کارت', emoji: '🃏', asset: '/assets/letters-house-3.webp', tone: 'violet', place: { left: 43.11, top: 22.66, w: 44.12, ratio: HR, bb: [19.0, 75.7, 9.7, 79.2] } as Place },
 ] as const;
+const LESSON_HOUSE = { asset: '/assets/letters-house-4.webp', place: { left: 23.70, top: 5.92, w: 44.46, ratio: HR, bb: [19.2, 80.0, 22.1, 70.1] } as Place };
 type House = typeof houses[number]['id'];
 
 export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => void; onComplete: (t: 'letter' | 'word', id?: string) => void }> = ({ onBack, onHome, onComplete }) => {
   const [house, setHouse] = useState<House | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
   const [lessonOrder] = useCurrentLesson();
   const lesson = CURRICULUM[lessonOrder - 1];
   const chooseHouse = (id: House) => { sound.playPop(); setHouse(id); };
   const done = useCallback(() => onComplete('letter', lesson.id), [onComplete, lesson.id]);
+  // دکمهٔ برگشت گوشی: پنجره‌ها ← بازی ← نقشهٔ خانه‌ها ← نقشهٔ جزیره
+  useBackHandler(() => { if (helpOpen) { setHelpOpen(false); return; } if (house) { setHouse(null); return; } onBack(); });
+
+  useEffect(() => { setStatusBarColor(house ? '#FFD25A' : '#57C3F1'); }, [house]);
 
   if (house) {
     const h = houses.find(x => x.id === house)!;
     return <main className="recognition-game-screen" dir="rtl">
-      <header className="letters-game-header">
-        <button onClick={() => setHouse(null)} aria-label="بازگشت به خانه‌ها"><span>‹</span></button>
-        <div><small>{h.title}</small><strong>{h.subtitle}</strong></div>
-        <button onClick={onHome} aria-label="صفحه شروع"><img src="/assets/letters-home.svg" alt="خانه" /></button>
-      </header>
+      <GameHeader kicker={h.title} title={h.subtitle} emoji={h.emoji} tone="sun" onBack={() => setHouse(null)}>
+        <LessonPicker compact />
+      </GameHeader>
       <div className="recognition-game-body">
-        <LessonPicker />
         {house === 'trace' && <LetterTrace key={lesson.id} lesson={lesson} onDone={done} />}
         {house === 'hunt' && <LetterHunt key={lesson.id} lesson={lesson} onDone={done} />}
         {house === 'like' && <LikeWhat key={lesson.id} lesson={lesson} onDone={done} />}
@@ -40,33 +52,71 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
       </div>
     </main>;
   }
-  return <main className="letters-village-screen" dir="rtl">
-    <div className="letters-village-content">
-      <img className="letters-village-map" src="/assets/letters-map.svg" alt="مسیر دهکده آشنایی با حروف" />
-      <div className="letters-village-shade" aria-hidden="true" />
-      <section className="letters-houses" aria-label="بازی‌های آشنایی با حروف">
-        {houses.map((h, i) => <button key={h.id} className={`letters-house house-${i + 1}`} onClick={() => chooseHouse(h.id)} aria-label={`${h.title}: ${h.subtitle}`}><img src={h.asset} alt="" /><span><b>{h.title}</b><small>{h.subtitle}</small></span></button>)}
-      </section>
-    </div>
-    <header className="letters-village-header">
-      <button onClick={onHome} aria-label="بازگشت به صفحه شروع"><img src="/assets/letters-home.svg" alt="خانه" /></button>
-      <div><span>دهکده اول</span><strong>آشنایی با حروف</strong></div>
-      <button onClick={() => { sound.playPop(); setHelpOpen(true); }} aria-label="راهنما"><img src="/assets/letters-help.svg" alt="راهنما" /></button>
+  return <MapScreen id="letters" map="/assets/letters-map.webp" alt="مسیر دهکده آشنایی با حروف" overlay={<>
+    <header className="map-topbar">
+      <button className="kid-round-btn back big" onClick={() => { sound.playPop(); onBack(); }} aria-label="بازگشت به نقشهٔ جزیره"><ArrowRight strokeWidth={3.2} /></button>
+      <div className="map-title-ribbon coral"><small>دهکدهٔ اول</small><strong>آشنایی با حروف</strong></div>
+      <button className="map-svg-button" onClick={() => { sound.playPop(); setHelpOpen(true); }} aria-label="راهنما"><img src="/assets/letters-help.svg" alt="راهنما" /></button>
     </header>
-    <footer className="letters-village-footer">نشانهٔ امروز: <b className="tahriri inline-glyph">{lesson.sign}</b> · یک خانه را انتخاب کن</footer>
+    <button className="lesson-chip" onClick={() => { sound.playPop(); setLessonsOpen(true); }}><span>نشانهٔ امروز</span><b className="tahriri">{lesson.sign}</b><small>درس {toFa(lessonOrder)}</small></button>
+    <LessonSheet open={lessonsOpen} onClose={() => setLessonsOpen(false)} />
     {helpOpen && <div className="letters-help-backdrop" onClick={() => setHelpOpen(false)}><section className="letters-help-panel" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
-      <button className="letters-help-close" onClick={() => setHelpOpen(false)}><X /></button>
+      <CloseArt className="letters-help-close" onClick={() => setHelpOpen(false)} />
       <div className="letters-help-mark">؟</div><h2>آشنایی با حروف</h2>
       <p>همهٔ بازی‌ها طبق ترتیب درس‌های کتاب فارسی اول جلو می‌روند و فقط از نشانه‌هایی استفاده می‌کنند که تا درسِ انتخاب‌شده خوانده‌ای.</p>
-      <LessonPicker />
-      <div className="letters-help-list">{houses.map((h, i) => <button key={h.id} onClick={() => { setHelpOpen(false); chooseHouse(h.id); }}><span>{i + 1}</span><b>{h.title}</b><small>{h.subtitle}</small></button>)}</div>
+      <div className="letters-help-lesson"><LessonPicker /></div>
+      <div className="letters-help-list">{houses.map((h, i) => <button key={h.id} onClick={() => { setHelpOpen(false); chooseHouse(h.id); }}><span>{toFa(i + 1)}</span><b>{h.title}</b><small>{h.subtitle}</small></button>)}</div>
     </section></div>}
-  </main>;
+  </>}>
+    {houses.map((h, i) => <MapSpot key={h.id} place={h.place} art={h.asset} index={i} title={h.title} subtitle={h.subtitle} tone={h.tone} hint={i === 0} onClick={() => chooseHouse(h.id)} />)}
+    <MapSpot place={LESSON_HOUSE.place} art={LESSON_HOUSE.asset} index={4} title="خانهٔ درس‌ها" subtitle="درس را انتخاب کن" tone="sun" badge="📅" onClick={() => { sound.playPop(); setLessonsOpen(true); }} />
+  </MapScreen>;
 };
 
 /* ------------------------------------------------------------------ */
-/* تمرین ۱: شکل پررنگ بالا، شکل توخالی/خط‌چین بزرگ پایین، دست‌کشیدن و «انجام دادم» */
-const TRACE_FONT = 'Tahriri';
+/* تمرین ۱: شکل پررنگ بالا، شکل توخالی/خط‌چین بزرگ پایین، دست‌کشیدن و «انجام دادم»
+   - نشانه همیشه کامل داخل کادر جا می‌شود (اندازه‌گیری پیکسلی، نه متریک فونت؛ مثلاً مدِّ «آ» بیرون نمی‌زند)
+   - برای قبول شدن باید حدود ۷۰٪ خط‌چین پوشانده شود و بیشترِ خط کودک روی خود نشانه باشد
+   - اگر کودک زیاد از خط‌چین بیرون برود، همان لحظه هشدار می‌گیرد */
+const TRACE_FONT = '"Tahriri"';
+const NEED_COVER = 0.7;      // حداقل پوشش خط‌چین
+const NEED_PRECISION = 0.72; // حداقل سهم خطِ کودک که روی/نزدیک نشانه است
+const AUTO_COVER = 0.9;      // با این پوشش، خودکار قبول می‌شود
+
+type TraceLayout = { w: number; h: number; size: number; x: number; y: number; glyph: Uint8Array | null; near: Uint8Array | null; strokes: { x: number; y: number }[][] };
+
+/** اندازه و جای نشانه را طوری پیدا می‌کند که کل جوهرِ آن (با نقطه و مد و سرکش) داخل کادر باشد */
+function fitText(text: string, w: number, h: number) {
+  const probe = 200;
+  const c = document.createElement('canvas');
+  const cw = Math.ceil(probe * (text.length + 2) * 1.2) + 200, ch = probe * 3;
+  c.width = cw; c.height = ch;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `${probe}px ${TRACE_FONT}`; g.fillStyle = '#000';
+  const ox = cw / 2, oy = ch / 2;
+  g.fillText(text, ox, oy);
+  g.lineWidth = probe * 0.02; g.strokeText(text, ox, oy);
+  const d = g.getImageData(0, 0, cw, ch).data;
+  let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
+  for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) if (d[(y * cw + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 <= x0) return { size: h * 0.6, x: w / 2, y: h / 2 };
+  const bw = x1 - x0 + 2, bh = y1 - y0 + 2;
+  const k = Math.min((w * 0.86) / bw, (h * 0.78) / bh);
+  return { size: probe * k, x: w / 2 - ((x0 + x1) / 2 - ox) * k, y: h / 2 - ((y0 + y1) / 2 - oy) * k };
+}
+
+function textMask(text: string, L: TraceLayout, grow: number) {
+  const c = document.createElement('canvas'); c.width = L.w; c.height = L.h;
+  const m = c.getContext('2d', { willReadFrequently: true })!;
+  m.direction = 'rtl'; m.textAlign = 'center'; m.textBaseline = 'middle'; m.font = `${L.size}px ${TRACE_FONT}`;
+  m.fillStyle = '#000'; m.strokeStyle = '#000'; m.lineJoin = 'round'; m.lineCap = 'round';
+  m.fillText(text, L.x, L.y);
+  if (grow > 0) { m.lineWidth = grow * 2; m.strokeText(text, L.x, L.y); }
+  const d = m.getImageData(0, 0, L.w, L.h).data; const out = new Uint8Array(L.w * L.h);
+  for (let i = 0; i < out.length; i++) out[i] = d[i * 4 + 3] > 60 ? 1 : 0;
+  return out;
+}
+
 const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ lesson, onDone }) => {
   const items = useMemo(() => {
     const list: { text: string; label: string }[] = [];
@@ -78,78 +128,107 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
   }, [lesson]);
   const [index, setIndex] = useState(0);
   const [fb, setFb] = useState<FeedbackState>(null);
+  const [meter, setMeter] = useState(0);
+  const [solved, setSolved] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const guideRef = useRef<HTMLCanvasElement>(null);
   const inkRef = useRef<HTMLCanvasElement>(null);
-  const layout = useRef<{ w: number; h: number; size: number; strokes: { x: number; y: number }[][] }>({ w: 0, h: 0, size: 100, strokes: [] });
+  const layout = useRef<TraceLayout>({ w: 0, h: 0, size: 100, x: 0, y: 0, glyph: null, near: null, strokes: [] });
   const drawing = useRef(false);
+  const outsideRun = useRef(0);
+  const lastWarn = useRef(0);
   const item = items[index % items.length];
+
+  const brush = () => Math.max(24, layout.current.size * 0.1);
+  const tolerance = () => Math.max(20, layout.current.size * 0.07);
 
   const drawGuide = useCallback(async () => {
     const wrap = wrapRef.current, guide = guideRef.current, ink = inkRef.current;
     if (!wrap || !guide || !ink) return;
     try { await document.fonts.load(`100px ${TRACE_FONT}`); } catch { /* ignore */ }
-    const w = wrap.clientWidth, h = Math.max(240, Math.min(420, Math.round(w * 0.55)));
-    const dpr = window.devicePixelRatio || 1;
+    const w = wrap.clientWidth;
+    const h = Math.round(Math.max(280, Math.min(520, w * 0.8, window.innerHeight * 0.56)));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     for (const c of [guide, ink]) { c.width = w * dpr; c.height = h * dpr; c.style.width = `${w}px`; c.style.height = `${h}px`; c.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    const fit = fitText(item.text, w, h);
+    const L: TraceLayout = { w, h, size: fit.size, x: fit.x, y: fit.y, glyph: null, near: null, strokes: [] };
     const ctx = guide.getContext('2d')!;
     ctx.clearRect(0, 0, w, h);
-    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    let size = h * 1.3;
-    ctx.font = `${size}px ${TRACE_FONT}`;
-    const tw = ctx.measureText(item.text).width;
-    if (tw > w * 0.9) size = size * (w * 0.9) / tw;
-    ctx.font = `${size}px ${TRACE_FONT}`;
-    // خط زمینه
-    ctx.strokeStyle = 'rgba(120,150,190,.25)'; ctx.lineWidth = 2; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(10, h * 0.56); ctx.lineTo(w - 10, h * 0.56); ctx.stroke();
-    // شکل توخالی: درون خیلی کم‌رنگ، دور خط‌چین
-    ctx.fillStyle = 'rgba(210,220,235,.55)';
-    ctx.fillText(item.text, w / 2, h * 0.5);
-    ctx.setLineDash([Math.max(4, size * 0.03), Math.max(3, size * 0.022)]);
-    ctx.lineWidth = Math.max(1.5, size * 0.008); ctx.strokeStyle = '#7b8798';
-    ctx.strokeText(item.text, w / 2, h * 0.5);
+    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${L.size}px ${TRACE_FONT}`;
+    // شکل توخالی: درون کم‌رنگ، دور خط‌چین
+    ctx.fillStyle = 'rgba(206,218,236,.6)';
+    ctx.fillText(item.text, L.x, L.y);
+    ctx.setLineDash([Math.max(5, L.size * 0.03), Math.max(4, L.size * 0.022)]);
+    ctx.lineWidth = Math.max(1.8, L.size * 0.009); ctx.strokeStyle = '#6f7d92'; ctx.lineJoin = 'round';
+    ctx.strokeText(item.text, L.x, L.y);
     ctx.setLineDash([]);
-    layout.current = { w, h, size, strokes: [] };
+    layout.current = L;
+    L.glyph = textMask(item.text, L, 0);
+    L.near = textMask(item.text, L, Math.max(20, L.size * 0.07));
     ink.getContext('2d')!.clearRect(0, 0, w, h);
+    setMeter(0); setSolved(false);
   }, [item.text]);
 
-  useEffect(() => { drawGuide(); const on = () => drawGuide(); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, [drawGuide]);
+  useEffect(() => { drawGuide(); let t = 0; const on = () => { window.clearTimeout(t); t = window.setTimeout(drawGuide, 150); }; window.addEventListener('resize', on); return () => { window.removeEventListener('resize', on); window.clearTimeout(t); }; }, [drawGuide]);
   useEffect(() => { sound.speakPersian(`روی ${item.text.includes(' ') ? 'نشانه‌ها' : 'نشانه'} دست بکش`); }, [index]); // eslint-disable-line
 
+  const isNear = (p: { x: number; y: number }) => { const L = layout.current; const x = Math.round(p.x), y = Math.round(p.y); if (!L.near || x < 0 || y < 0 || x >= L.w || y >= L.h) return false; return L.near[y * L.w + x] === 1; };
   const pos = (e: React.PointerEvent) => { const r = inkRef.current!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-  const down = (e: React.PointerEvent) => { e.preventDefault(); (e.target as Element).setPointerCapture(e.pointerId); drawing.current = true; layout.current.strokes.push([pos(e)]); };
+  const down = (e: React.PointerEvent) => { if (solved) return; e.preventDefault(); (e.target as Element).setPointerCapture(e.pointerId); drawing.current = true; outsideRun.current = 0; layout.current.strokes.push([pos(e)]); };
   const move = (e: React.PointerEvent) => {
-    if (!drawing.current) return; const p = pos(e); const s = layout.current.strokes[layout.current.strokes.length - 1]; const last = s[s.length - 1]; s.push(p);
-    const ctx = inkRef.current!.getContext('2d')!; ctx.strokeStyle = lesson.part === 1 ? '#ef5b5b' : '#6c5ce7'; ctx.lineWidth = Math.max(8, layout.current.size * 0.045); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (!drawing.current) return; const p = pos(e); const s = layout.current.strokes[layout.current.strokes.length - 1]; const last = s[s.length - 1];
+    const dist = Math.hypot(p.x - last.x, p.y - last.y); if (dist < 1.5) return; s.push(p);
+    const inside = isNear(p);
+    if (inside) outsideRun.current = 0; else outsideRun.current += dist;
+    const ctx = inkRef.current!.getContext('2d')!;
+    ctx.strokeStyle = inside ? (lesson.part === 1 ? '#ef5b5b' : '#6c5ce7') : 'rgba(150,160,175,.75)';
+    ctx.lineWidth = Math.max(12, layout.current.size * 0.06); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    if (outsideRun.current > Math.max(45, layout.current.size * 0.18) && Date.now() - lastWarn.current > 2600) {
+      lastWarn.current = Date.now(); outsideRun.current = 0; vibrate(90);
+      setFb({ tone: 'try', emoji: '🙈', text: 'از خط‌چین بیرون رفتی! روی خود نشانه دست بکش.' });
+      sound.speakPersian('روی خط‌چین دست بکش');
+    }
   };
-  const up = () => { drawing.current = false; };
-  const clear = () => { layout.current.strokes = []; const { w, h } = layout.current; inkRef.current?.getContext('2d')!.clearRect(0, 0, w, h); };
 
-  /** درصد پوشش شکل نشانه با خط کودک */
-  const coverage = () => {
-    const { w, h, size, strokes } = layout.current;
-    const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
-    const m = mask.getContext('2d')!; m.direction = 'rtl'; m.textAlign = 'center'; m.textBaseline = 'middle'; m.font = `${size}px ${TRACE_FONT}`; m.fillStyle = '#000'; m.fillText(item.text, w / 2, h * 0.5);
-    const inkC = document.createElement('canvas'); inkC.width = w; inkC.height = h;
-    const k = inkC.getContext('2d')!; k.strokeStyle = '#000'; k.lineWidth = Math.max(14, size * 0.07); k.lineCap = 'round'; k.lineJoin = 'round';
-    strokes.forEach(s => { k.beginPath(); s.forEach((p, i) => i ? k.lineTo(p.x, p.y) : k.moveTo(p.x, p.y)); if (s.length === 1) k.lineTo(s[0].x + 0.1, s[0].y); k.stroke(); });
-    const a = m.getImageData(0, 0, w, h).data, b = k.getImageData(0, 0, w, h).data;
-    let glyph = 0, hit = 0, inkPx = 0, inkOn = 0;
-    for (let i = 3; i < a.length; i += 16) { const g = a[i] > 60, s = b[i] > 60; if (g) { glyph++; if (s) hit++; } if (s) { inkPx++; if (g) inkOn++; } }
-    return { cover: glyph ? hit / glyph : 0, precision: inkPx ? inkOn / inkPx : 0 };
+  /** پوشش خط‌چین و دقت خط کودک */
+  const measure = () => {
+    const L = layout.current;
+    if (!L.glyph || !L.near) return { cover: 0, precision: 0 };
+    const c = document.createElement('canvas'); c.width = L.w; c.height = L.h;
+    const k = c.getContext('2d', { willReadFrequently: true })!; k.strokeStyle = '#000'; k.lineWidth = brush(); k.lineCap = 'round'; k.lineJoin = 'round';
+    L.strokes.forEach(s => { k.beginPath(); s.forEach((p, i) => i ? k.lineTo(p.x, p.y) : k.moveTo(p.x, p.y)); if (s.length === 1) k.lineTo(s[0].x + 0.1, s[0].y); k.stroke(); });
+    const b = k.getImageData(0, 0, L.w, L.h).data;
+    let glyph = 0, hit = 0;
+    for (let i = 0; i < L.glyph.length; i += 2) if (L.glyph[i]) { glyph++; if (b[i * 4 + 3] > 60) hit++; }
+    let pts = 0, ok = 0;
+    L.strokes.forEach(s => s.forEach(p => { pts++; if (isNear(p)) ok++; }));
+    return { cover: glyph ? hit / glyph : 0, precision: pts ? ok / pts : 0 };
   };
+
+  const succeed = () => {
+    setSolved(true); setMeter(1);
+    sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} خیلی خوب کشیدی.` }); onDone();
+    window.setTimeout(() => setIndex(i => (i + 1) % items.length), 1300);
+  };
+
+  const up = () => {
+    if (!drawing.current) return; drawing.current = false;
+    const { cover, precision } = measure();
+    setMeter(Math.min(1, cover / NEED_COVER));
+    if (cover >= AUTO_COVER && precision >= NEED_PRECISION && !solved) succeed();
+  };
+  const clear = () => { layout.current.strokes = []; const { w, h } = layout.current; inkRef.current?.getContext('2d')!.clearRect(0, 0, w, h); setMeter(0); setSolved(false); };
 
   const finish = () => {
+    if (solved) return;
     if (!layout.current.strokes.length) { setFb({ tone: 'info', text: 'اول با انگشتت روی خط‌چین‌ها دست بکش.' }); return; }
-    const { cover, precision } = coverage();
-    if (cover >= 0.45 && precision >= 0.18) {
-      sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} خیلی خوب نوشتی.` }); onDone();
-      window.setTimeout(() => setIndex(i => (i + 1) % items.length), 900);
-    } else {
-      sound.speakPersian('کمی بیشتر روی خط‌چین دست بکش');
-      setFb({ tone: 'try', text: cover < 0.45 ? 'هنوز همهٔ شکل را نکشیده‌ای؛ کمی بیشتر روی خط‌چین دست بکش.' : 'از خط‌چین بیرون رفتی؛ آرام‌تر و روی خود نشانه بکش.' });
+    const { cover, precision } = measure();
+    if (cover >= NEED_COVER && precision >= NEED_PRECISION) succeed();
+    else {
+      vibrate(60);
+      if (precision < NEED_PRECISION) { sound.speakPersian('روی خط‌چین دست بکش'); setFb({ tone: 'try', emoji: '🙈', text: 'خیلی از خط‌چین بیرون رفتی. پاک کن و آرام روی خود نشانه بکش.' }); }
+      else { sound.speakPersian('کمی بیشتر روی خط‌چین دست بکش'); setFb({ tone: 'try', emoji: '✏️', text: `هنوز همهٔ شکل را نکشیده‌ای (${toFa(Math.round(cover * 100))}٪). بقیهٔ خط‌چین را هم بکش.` }); }
     }
   };
 
@@ -161,11 +240,15 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     <p className="trace-label">{item.label} <em>({toFa(index % items.length + 1)} از {toFa(items.length)})</em></p>
     <div className="trace-canvas-wrap" ref={wrapRef}>
       <canvas ref={guideRef} className="trace-guide" />
-      <canvas ref={inkRef} className="trace-ink" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      <canvas ref={inkRef} className="trace-ink" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={up} />
+    </div>
+    <div className={`trace-meter ${meter >= 1 ? 'full' : ''}`} aria-label="مقدار کشیده‌شده">
+      <i style={{ width: `${Math.round(meter * 100)}%` }} />
+      <span>{meter >= 1 ? '⭐ آماده است!' : 'روی همهٔ خط‌چین دست بکش'}</span>
     </div>
     <div className="trace-actions">
       <button className="soft-btn" onClick={clear}><Eraser /> پاک کن</button>
-      <button className="big-done" onClick={finish}><Check /> انجام دادم</button>
+      <OkArt className="trace-ok" ready={meter >= 1 && !solved} onClick={finish} label="انجام دادم" caption="انجام دادم" />
       <button className="soft-btn" onClick={() => { clear(); setIndex(i => (i + 1) % items.length); }}>بعدی <ChevronLeft /></button>
     </div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
