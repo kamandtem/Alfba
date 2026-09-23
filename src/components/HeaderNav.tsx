@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles } from 'lucide-react';
 import { sound } from '../utils/audio';
 import { toPersianDigits } from '../data/persianAlphabet';
 import { ActiveScreen } from '../types';
@@ -27,8 +27,8 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ currentScreen, onNavigate,
   const toggle = () => { const muted = sound.toggleMute(); setIsMuted(muted); if (!muted) sound.playPop(); };
   return <header className="kid-header tone-sun" id="app-header-nav">
     <div className="kid-header-row">
-      <button className="kid-round-btn back" onClick={() => { sound.playPop(); onBack ? onBack() : onNavigate('village_map'); }} aria-label="بازگشت">
-        <ArrowRight strokeWidth={3.2} />
+      <button className="kid-back-btn" onClick={() => { sound.playPop(); onBack ? onBack() : onNavigate('village_map'); }} aria-label="بازگشت">
+        <img className="kid-back-art" src="/assets/ui/btn-back.svg" alt="" draggable={false} />
       </button>
       <div className="kid-header-title">
         <span className="kid-header-emoji" aria-hidden="true">{emoji}</span>

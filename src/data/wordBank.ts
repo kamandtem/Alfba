@@ -3,7 +3,8 @@
  * درسِ «باز شدن» هر واژه به‌طور خودکار از روی نشانه‌هایش محاسبه می‌شود؛
  * پس هیچ تمرینی واژه‌ای با نشانهٔ آموزش‌داده‌نشده نشان نمی‌دهد.
  */
-import { lessonOfWord, plainWord, wordToTokens } from '../utils/pieces';
+import { hasSign, lessonOfWord, plainWord, signMap, wordToTokenSpans, wordToTokens, ZWJ, ZWNJ, parseToken, connectsLeft } from '../utils/pieces';
+import { BOARD_WORDS } from './boardWords';
 
 import { bookLessonOf } from './curriculum';
 
@@ -75,7 +76,7 @@ const RAW = `
 مُثَلَّث|🔺 ثانیه|⏱️ کَثیف|🗑️ اَثَر مِثل
 حَلَزون|🐌 حوض|⛲ صُبح|🌅 حَمّام|🛁 حَیوان|🐾 صُبحانه|🍳 حَسَن|👦 حالا حَرف|🔤 تِمساح|🐊 خوشحال|😄
 مَریض|🤒 قاضی|⚖️ رِضا|👦 ضَرب|✖️ فَضا|🪐 راضی|😊
-طوطی|🦜 طَناب|🪢 قَطار|🚂 طَبل|🥁 حَیاط|🏡 بَطری|🍾 خَط|✏️ طِلا|🥇 نُقطه|⚫ وَطَن|🇮🇷
+طوطی|🦜 طَناب|🪢 قَطار|🚂 طَبل|🥁 حَیاط|🏡 بَطری|🍾 خَط|✏️ طَلا|🥇 نُقطه|⚫ وَطَن|🇮🇷
 کَلاغ|🐦‍⬛ غَذا|🍲 باغ|🌳 مُرغ|🐔 اَلاغ|🫏 چِراغ|🚦 غاز|🦢 دوغ|🥛 جیغ|😱 مُرغابی|🦆 باغچه|🌷 تیغ|🌵 غُنچه|🌹 غَمگین|😢 لاغَر مَغز|🧠
 ظَرف|🥣 ظُهر|🕛 حافِظ|📜 مُحافِظ|💂 لَحظه|⏳ مَنظَره|🏞️
 `;
@@ -118,6 +119,124 @@ export function lessonWords(lesson: number, min = 6): WordEntry[] {
   return list;
 }
 export const findWord = (plain: string) => WORD_BANK.find(w => w.plain === plain);
+
+/* ---------------- تختهٔ مغناطیسی: کلمه‌های درس و پیشنهاد کلمه ---------------- */
+const splitItems = (raw: string) => raw.split(/\s+/).filter(Boolean).map(parseItem);
+const extraCache = new Map<string, WordEntry>();
+/** واژه را از بانک برمی‌دارد (برای ثبت پیشرفت یکسان)، وگرنه یک مدخل تازه می‌سازد */
+const entryOf = (word: string, emoji: string): WordEntry => {
+  const plain = plainWord(word);
+  const known = WORD_BANK.find(w => w.plain === plain);
+  if (known) return known.emoji || !emoji ? known : { ...known, emoji };
+  let e = extraCache.get(plain);
+  if (!e) { e = { id: `b_${plain}`, word, plain, emoji, lesson: lessonOfWord(word), tokens: wordToTokens(word) }; extraCache.set(plain, e); }
+  return e;
+};
+/** شمار حرف‌ها (بی‌اعراب) برای چیدن از ساده به سخت */
+const letterCount = (w: WordEntry) => [...w.plain].length;
+const byEase = (list: WordEntry[]) => list.map((w, i) => ({ w, i })).sort((a, b) => letterCount(a.w) - letterCount(b.w) || a.i - b.i).map(x => x.w);
+const uniq = (list: WordEntry[]) => { const seen = new Set<string>(); return list.filter(w => !seen.has(w.plain) && !!seen.add(w.plain)); };
+
+/** همهٔ واژه‌هایی که در کتاب آمده‌اند (برای این‌که «پیشنهاد کلمه» فقط واژهٔ بیرون از کتاب بدهد) */
+const BOOK_PLAINS = new Set<string>([
+  ...WORD_BANK.filter(w => w.book).map(w => w.plain),
+  ...Object.values(BOARD_WORDS).flatMap(d => [...splitItems(d.write), ...splitItems(d.review)].map(x => plainWord(x.word))),
+]);
+
+/**
+ * «کلمه‌های درس» در تختهٔ مغناطیسی:
+ * ۱) واژه‌های بخش «بنویس» زیر عنوان درس (نشانهٔ درس را دارند)، از کوتاه به بلند
+ * ۲) چند واژهٔ مهم دیگرِ همان درس / مرور درس قبل، از کوتاه به بلند
+ * همه فقط با نشانه‌های خوانده‌شده.
+ */
+export function boardLessonWords(order: number): WordEntry[] {
+  const d = BOARD_WORDS[order];
+  if (!d) return lessonWords(order, 8);
+  const ok = (w: WordEntry) => w.lesson <= order;
+  const write = splitItems(d.write).map(x => entryOf(x.word, x.emoji)).filter(ok);
+  const withSign = write.filter(w => hasSign(w.word, order));
+  const first = byEase([...withSign, ...write.filter(w => !withSign.includes(w))]);
+  const second = byEase(splitItems(d.review).map(x => entryOf(x.word, x.emoji)).filter(ok));
+  const list = uniq([...first, ...second]);
+  return list.length ? list : lessonWords(order, 8);
+}
+
+/**
+ * «پیشنهاد کلمه» در تختهٔ مغناطیسی: واژه‌های بیرون از کتاب که نشانهٔ همین درس را دارند
+ * و همهٔ نشانه‌هایشان پیش‌تر خوانده شده؛ از ساده به سخت.
+ */
+export function boardSuggestWords(order: number): WordEntry[] {
+  const d = BOARD_WORDS[order];
+  const fit = (w: WordEntry) => w.lesson <= order && hasSign(w.word, order) && !BOOK_PLAINS.has(w.plain);
+  const curated = d ? splitItems(d.suggest).map(x => entryOf(x.word, x.emoji)).filter(fit) : [];
+  let list = uniq(byEase(curated));
+  if (!list.length && order > 3) list = uniq(byEase(WORD_BANK.filter(fit)));
+  return list;
+}
+
+/* ---------------- دیکتهٔ شب: کلمهٔ ناقص ---------------- */
+/** یک تمرین دیکته: واژه با یک جای خالی به جای نشانهٔ درس */
+export interface DictationItem {
+  entry: WordEntry;
+  /** بخش پیش از جای خالی (با شکلِ پیوستهٔ درست) */
+  before: string;
+  /** بخش پس از جای خالی */
+  after: string;
+  /** قطعه‌ای که باید در جای خالی گذاشته شود (دقیقاً همان شکل جعبهٔ حروف، مثل «نـ» یا «د») */
+  answer: string;
+}
+
+/**
+ * جای خالیِ دیکته: نخستین جایی از واژه که نشانهٔ همین درس روی آن است، با یک قطعه عوض می‌شود.
+ * اگر واژه نشانهٔ درس را نداشته باشد null برمی‌گرداند.
+ */
+export function dictationBlank(entry: WordEntry, order: number): DictationItem | null {
+  const word = [...entry.word].filter(c => c !== ZWJ).join('');
+  const hit = signMap(word).find(m => m.sign === order);
+  if (!hit) return null;
+  const spans = wordToTokenSpans(word);
+  const k = spans.findIndex(sp => hit.index >= sp.start && hit.index < sp.end);
+  if (k < 0) return null;
+  const chars = [...word];
+  const blank = spans[k];
+  const def = parseToken(blank.token);
+  // آخرین حرفِ پیش از جای خالی (بی‌اعراب) به جای خالی می‌چسبد؟
+  let prevLetter: typeof spans[number] | null = null;
+  for (let j = k - 1; j >= 0; j--) { if (parseToken(spans[j].token).kind !== 'mark') { prevLetter = spans[j]; break; } }
+  const brokenBefore = prevLetter ? chars.slice(prevLetter.end, blank.start).includes(ZWNJ) : true;
+  const prevJoins = !!prevLetter && !brokenBefore && connectsLeft(parseToken(prevLetter.token));
+  const blankJoinsNext = def.kind === 'mark' ? prevJoins : connectsLeft(def);
+  const hasAfter = spans.slice(k + 1).some(sp => parseToken(sp.token).kind !== 'mark') && !chars.slice(blank.end, spans[k + 1]?.start ?? blank.end).includes(ZWNJ);
+  const beforeTxt = chars.slice(0, blank.start).join('');
+  const afterTxt = chars.slice(blank.end).join('');
+  return {
+    entry,
+    before: beforeTxt + (prevJoins && beforeTxt ? ZWJ : ''),
+    after: (blankJoinsNext && hasAfter && afterTxt ? ZWJ : '') + afterTxt,
+    answer: blank.token,
+  };
+}
+
+/**
+ * واژه‌های «دیکتهٔ شب» برای هر نشانه:
+ * ۱) واژه‌های بخش «بنویس» همان درس کتاب که نشانهٔ درس را دارند (ساده ← سخت)
+ * ۲) بقیهٔ واژه‌های همان درس کتاب که نشانهٔ درس را دارند
+ * ۳) اگر فهرست همان درس کوتاه بود، واژه‌های کتابیِ درس‌های پیشین
+ * از درس «نـ ن» به بعد فقط واژه‌هایی که همهٔ نشانه‌هایشان پیش‌تر خوانده شده؛
+ * در درس‌های آغازین (پیش از «نـ ن») واژه‌های کتاب حتی با نشانهٔ نخوانده هم می‌آیند، چون کتاب هم همین‌طور است.
+ */
+export function dictationWords(order: number): DictationItem[] {
+  const strict = order >= 10;
+  const ok = (w: WordEntry) => !strict || w.lesson <= order;
+  const book = bookLessonOf(order);
+  const d = BOARD_WORDS[order];
+  const write = d ? splitItems(d.write).map(x => entryOf(x.word, x.emoji)) : [];
+  const review = d ? splitItems(d.review).map(x => entryOf(x.word, x.emoji)) : [];
+  const bookWords = WORD_BANK.filter(w => w.book === book);
+  const withSign = (list: WordEntry[]) => list.filter(w => ok(w) && hasSign(w.word, order));
+  const inBook = uniq([...byEase(withSign(write)), ...byEase(withSign([...bookWords, ...review]))]);
+  return inBook.map(w => dictationBlank(w, order)).filter((x): x is DictationItem => !!x);
+}
 
 /** جمله‌های ساده کتابی؛ درسِ هر جمله از روی واژه‌هایش محاسبه می‌شود */
 const SENTENCE_RAW = `
@@ -237,5 +356,7 @@ const SENTENCE_RAW = `
 ظُهر شُد
 `;
 export interface SentenceEntry { id: string; text: string; lesson: number }
-export const SENTENCE_BANK: SentenceEntry[] = [...new Set(SENTENCE_RAW.split('\n').map(s => s.trim()).filter(Boolean))]
+const LEGACY_SENTENCE_BANK: SentenceEntry[] = [...new Set(SENTENCE_RAW.split('\n').map(s => s.trim()).filter(Boolean))]
   .map((text, i) => ({ id: `s${i}`, text, lesson: Math.max(...text.split(' ').map(lessonOfWord)) }));
+/** بانک جدیدِ مرحله‌بندی‌شده در sentenceBank.ts مرجع اصلی جمله‌سازی است. */
+export { SENTENCE_BANK } from './sentenceBank';

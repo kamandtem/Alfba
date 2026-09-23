@@ -13,6 +13,7 @@ import { RecognitionVillage } from './components/RecognitionVillage';
 import { SentenceBuilder } from './components/SentenceBuilder';
 import { WordVillage } from './components/WordVillage';
 import { MyProgress } from './components/MyProgress';
+import { ExitDialog } from './components/ExitDialog';
 import { ActiveScreen, UserProgress } from './types';
 import { loadProgress, recordActivityCompleted } from './utils/progressStorage';
 import { sound } from './utils/audio';
@@ -27,10 +28,16 @@ const RESUMABLE: Partial<Record<ActiveScreen, string>> = { recognition_village: 
 const readResume = (): ActiveScreen | null => { try { const v = localStorage.getItem(RESUME_KEY) as ActiveScreen | null; return v && RESUMABLE[v] ? v : null; } catch { return null; } };
 
 export default function App() {
+  return <><AppScreens /><ExitDialog /></>;
+}
+
+function AppScreens() {
   const [screen, setScreen] = useState<ActiveScreen>('splash');
   const [progress, setProgress] = useState<UserProgress>(loadProgress());
   const [subject, setSubject] = useState<'persian'|'math'>('persian');
   const [skipNativeSplash, setSkipNativeSplash] = useState(false);
+  /** اگر «پیشرفت من» از داخل یک بازی باز شد، برگشت به همان بازی */
+  const [progressFrom, setProgressFrom] = useState<ActiveScreen | null>(null);
   const complete = useCallback((type:'letter'|'word'|'math', id?:string)=>setProgress(recordActivityCompleted(type,id)),[]);
   const navigate = (next:ActiveScreen) => { sound.playPop(); setScreen(next); };
   useEffect(()=>{ initBackNavigation(); initNativeChrome(); },[]);
@@ -47,11 +54,11 @@ export default function App() {
     onStart={()=>{setSkipNativeSplash(true);navigate('village_map')}}
     onContinue={()=>{setSkipNativeSplash(true);navigate(readResume() || 'village_map')}}
     onProgress={()=>{setSkipNativeSplash(true);navigate('my_progress')}}/>; }
-  if(screen==='my_progress') return <MyProgress progress={progress} onBack={toStart}/>;
+  if(screen==='my_progress') return <MyProgress progress={progress} onBack={()=>{ if(progressFrom){ const f=progressFrom; setProgressFrom(null); navigate(f); } else toStart(); }}/>;
   if(screen==='subject_select') return <SubjectSelect onSelect={s=>{setSubject(s);navigate(s==='persian'?'village_map':'math_games')}}/>;
   if(screen==='village_map') return <VillageMap onSubject={()=>{setSkipNativeSplash(true);navigate('splash')}} onNavigate={navigate} onVillage={v=>navigate(v==='recognition'?'recognition_village':v==='word'?'word_village':'sentence_builder')}/>;
   if(screen==='recognition_village') return <RecognitionVillage onBack={()=>navigate('village_map')} onHome={()=>{setSkipNativeSplash(true);navigate('splash')}} onComplete={complete}/>;
-  if(screen==='word_village') return <WordVillage onBack={()=>navigate('village_map')} onComplete={complete}/>;
+  if(screen==='word_village') return <WordVillage onBack={()=>navigate('village_map')} onComplete={complete} stars={progress.starsCount} onProgress={()=>{ setProgressFrom('word_village'); navigate('my_progress'); }}/>;
   if(screen==='sentence_builder') return <SentenceBuilder onBack={()=>navigate('village_map')} onComplete={complete}/>;
 
   return <div id="persian-first-grade-app-root" className="legacy-shell min-h-screen w-full text-slate-800 flex flex-col select-none overflow-x-hidden" dir="rtl">

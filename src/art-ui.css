@@ -149,3 +149,111 @@
   .start-screen{background:linear-gradient(180deg,oklch(62% .12 245) 0%,oklch(74% .1 235) 45%,oklch(80% .07 225) 74%,oklch(78% .09 50) 74.5%,oklch(74% .1 45) 100%)}
   .start-screen .start-background{inset:0 auto 0 50%;width:auto;height:100%;max-width:none;aspect-ratio:935/1663;translate:-50% 0;object-fit:cover;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%)}
 }
+
+/* =====================================================================
+   نسخهٔ ۷: پنجرهٔ «صداهای برنامه» (مطابق تصویر مرجع) + موسیقی پس‌زمینه
+   ===================================================================== */
+.settings-scene{position:fixed;inset:0;z-index:40;display:grid;place-items:center;overflow:hidden;padding:calc(var(--sat,0px) + 12px) 12px calc(var(--sab,0px) + 12px);
+  background:linear-gradient(180deg,oklch(80% .1 225) 0%,oklch(87% .08 210) 46%,oklch(78% .11 195) 62%,oklch(66% .12 205) 100%);animation:menuFade 260ms var(--ease-out) both}
+.settings-scene .menu-rays{top:40%}
+.settings-sea{position:absolute;left:0;right:0;bottom:0;height:30%;pointer-events:none}
+.settings-sea i{position:absolute;left:-10%;right:-10%;height:40%;border-radius:50% 50% 0 0/40% 40% 0 0;animation:seaBob 5s ease-in-out infinite}
+.settings-sea i:nth-child(1){bottom:48%;background:oklch(74% .12 195/.6)}
+.settings-sea i:nth-child(2){bottom:22%;background:oklch(66% .13 205/.75);animation-delay:-1.6s}
+.settings-sea i:nth-child(3){bottom:-6%;background:oklch(88% .07 85);height:34%;animation:none}
+@keyframes seaBob{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(2.5%) translateY(6%)}}
+
+.sound-panel{position:relative;z-index:2;width:min(94vw,78dvh,560px);aspect-ratio:250.67/254.67;font-family:var(--ui-font);animation:bookIn 420ms var(--ease-expo) both;filter:drop-shadow(0 18px 18px oklch(30% .08 220/.3))}
+.sound-panel-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
+.sound-btn{position:absolute;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 140ms var(--ease-out),filter 140ms var(--ease-out);filter:drop-shadow(0 3px 2px oklch(35% .08 30/.22))}
+.sound-btn img{display:block;width:100%;height:auto;pointer-events:none}
+.sound-btn:active{transform:translateY(2px) scale(.93)}
+.sound-btn:focus-visible,.vol-slider:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px;border-radius:999px}
+.sound-close{left:79%;top:13%;width:15%}
+.sound-ok{left:41%;top:50.5%;width:18%}
+.sound-ok:hover{filter:drop-shadow(0 3px 2px oklch(35% .08 30/.22)) brightness(1.06)}
+
+.sound-row{position:absolute;left:19%;width:63%;display:flex;align-items:center;gap:2.4%}
+.sound-row-sfx{top:27.5%}
+.sound-row-music{top:40.5%}
+.sound-row .sound-icon{position:relative;flex:0 0 18.25%}
+.sound-icon.muted{filter:grayscale(.85) brightness(.95);opacity:.75}
+.sound-icon.muted:after{content:"";position:absolute;left:12%;right:12%;top:50%;height:9%;border-radius:9px;background:oklch(52% .2 25);transform:rotate(-40deg);box-shadow:0 0 0 2px oklch(97% .03 80)}
+
+.vol-slider{--v:50%;position:relative;flex:1;aspect-ratio:102.69/9.26;touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none}
+.vol-slider:before{content:"";position:absolute;inset:-160% -4%}/* ناحیهٔ لمس بزرگ‌تر برای انگشت کودک */
+.vol-slider img{position:absolute;pointer-events:none;user-select:none}
+.vol-track,.vol-fill{inset:0;width:100%;height:100%}
+.vol-fill{clip-path:inset(0 calc(100% - var(--v)) 0 0 round 999px)}
+.vol-knob{left:var(--v);top:50%;height:230%;width:auto;aspect-ratio:20.44/20.89;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 2px oklch(35% .08 30/.3));transition:transform 120ms var(--ease-out)}
+.vol-slider:active .vol-knob{transform:translate(-50%,-50%) scale(1.12)}
+@media (prefers-reduced-motion:reduce){.settings-sea i,.sound-panel,.settings-scene{animation:none}}
+
+/* =====================================================================
+   نسخهٔ ۸: پنجرهٔ خروج «میخوای بری؟»، دکمهٔ برگشت تصویری، صندوقچهٔ حروف
+   ===================================================================== */
+.exit-scene{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:calc(var(--sat,0px) + 16px) 16px calc(var(--sab,0px) + 16px);
+  background:oklch(30% .05 30/.28);-webkit-backdrop-filter:blur(9px) saturate(1.1);backdrop-filter:blur(9px) saturate(1.1);animation:menuFade 220ms var(--ease-out) both}
+.exit-panel{position:relative;width:min(88vw,70dvh,500px);aspect-ratio:233/218;animation:exitIn 460ms var(--ease-expo) both;filter:drop-shadow(0 20px 22px oklch(25% .06 30/.35))}
+.exit-panel-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
+.exit-btn{position:absolute;top:51%;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 4px 3px oklch(35% .08 30/.22));transition:transform 140ms var(--ease-out);animation:exitBtnIn 520ms var(--ease-expo) both}
+.exit-btn img{display:block;width:100%;height:auto;pointer-events:none}
+.exit-btn:hover{transform:translateY(-2px)}
+.exit-btn:active{transform:translateY(3px) scale(.93)}
+.exit-btn:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px;border-radius:24px}
+.exit-no{left:21%;width:27%;animation-delay:120ms}
+.exit-yes{left:53%;width:26%;animation-delay:200ms}
+@keyframes exitIn{from{opacity:0;transform:translateY(10%) scale(.8) rotate(2deg)}to{opacity:1;transform:none}}
+@keyframes exitBtnIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+.kid-back-btn{flex:none;width:52px;height:auto;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 2px rgba(60,30,10,.22));transition:transform .12s}
+.kid-back-btn.big{width:62px}
+.kid-back-btn:active{transform:translateY(3px) scale(.93)}
+.kid-back-btn:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px;border-radius:50%}
+.kid-back-art{display:block;width:100%;height:auto;pointer-events:none}
+
+.wv-chest-btn{position:relative;display:inline-grid;justify-items:center;width:clamp(86px,22vw,118px);padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 5px 4px oklch(35% .08 40/.25));transition:transform 160ms var(--ease-out)}
+.wv-chest-btn img{display:block;width:100%;height:auto;pointer-events:none;transform-origin:50% 90%;animation:chestWiggle 3.2s ease-in-out infinite}
+.wv-chest-btn span{margin-top:-6px;padding:3px 10px;border-radius:999px;background:oklch(98% .03 80);color:oklch(40% .1 40);font-weight:1000;font-size:.78rem;box-shadow:0 3px 0 oklch(70% .08 50);white-space:nowrap}
+.wv-chest-btn:active{transform:translateY(3px) scale(.94)}
+.wv-chest-btn.open img{animation:none;transform:scale(1.06)}
+@keyframes chestWiggle{0%,82%,100%{transform:rotate(0)}86%{transform:rotate(-4deg)}90%{transform:rotate(4deg)}94%{transform:rotate(-2deg)}}
+@media (prefers-reduced-motion:reduce){.exit-panel,.exit-btn,.wv-chest-btn img{animation:none}}
+
+/* =====================================================================
+   نسخهٔ ۹: نوار امتیاز تخته مغناطیسی + جزیرهٔ امتیاز (Dynamic Island)
+   ===================================================================== */
+.wv-hud{display:flex;justify-content:center;padding:4px 10px 0}
+.score-bar{--sh:clamp(40px,11vw,50px);display:inline-flex;align-items:center;height:var(--sh);filter:drop-shadow(0 4px 3px oklch(35% .08 40/.25))}
+.score-coin{position:relative;z-index:2;height:100%;width:auto;margin-right:calc(var(--sh) * -.28)}
+.score-plate{position:relative;z-index:1;display:grid;place-items:center;height:calc(var(--sh) * .74);width:calc(var(--sh) * 2.1)}
+.score-plate img{position:absolute;inset:0;width:100%;height:100%}
+.score-plate b{position:relative;padding-inline:calc(var(--sh) * .3) calc(var(--sh) * .25);font-family:var(--ui-font);font-weight:1000;font-size:calc(var(--sh) * .42);line-height:1;color:oklch(98% .02 85);text-shadow:0 2px 0 oklch(35% .12 20/.55);font-variant-numeric:tabular-nums}
+.score-plus{position:relative;z-index:2;height:100%;margin-left:calc(var(--sh) * -.24);padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 140ms var(--ease-out)}
+.score-plus img{display:block;height:100%;width:auto;pointer-events:none}
+.score-plus:active{transform:translateY(2px) scale(.9)}
+.score-plus:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px;border-radius:12px}
+.score-bar.bump .score-coin{animation:coinSpin 650ms var(--ease-out)}
+.score-bar.bump .score-plate b{animation:numPop 650ms var(--ease-out)}
+@keyframes coinSpin{0%{transform:scale(1) rotateY(0)}40%{transform:scale(1.25) rotateY(180deg)}100%{transform:scale(1) rotateY(360deg)}}
+@keyframes numPop{0%,100%{transform:scale(1)}35%{transform:scale(1.3);color:oklch(92% .16 95)}}
+
+.kid-header-title.as-button{border:0;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 140ms var(--ease-out)}
+.kid-header-title.as-button:active{transform:scale(.95)}
+.kid-header-title.as-button:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px}
+
+.score-island{position:fixed;z-index:80;overflow:hidden;background:#0d0d10;color:#fff;box-shadow:0 14px 34px rgba(0,0,0,.32),inset 0 0 0 1px rgba(255,255,255,.06);cursor:pointer;font-family:var(--ui-font)}
+.score-island-body{position:absolute;inset:0;display:flex;align-items:center;gap:10px;padding:0 12px 0 18px;min-width:300px;animation:islandContent 420ms 160ms var(--ease-out) both}
+.score-island.closing .score-island-body{animation:islandContentOut 160ms ease-in both}
+.score-island-chest{flex:none;height:62px;width:auto;margin-block:-4px;filter:drop-shadow(0 3px 6px rgba(255,190,40,.35));animation:chestHop 900ms 260ms var(--ease-out) both}
+.score-island-text{flex:1;display:grid;gap:1px;min-width:0}
+.score-island-text small{font-size:.72rem;font-weight:800;color:rgba(255,255,255,.66);white-space:nowrap}
+.score-island-text b{font-size:1.45rem;font-weight:1000;line-height:1.15;color:#ffd24a;white-space:nowrap}
+.score-island-text b span{font-size:.9rem;color:#fff}
+.score-island-total{flex:none;display:flex;align-items:center;gap:5px;padding:5px 10px 5px 6px;border-radius:999px;background:rgba(255,255,255,.1)}
+.score-island-total img{width:24px;height:auto}
+.score-island-total span{font-weight:1000;font-size:.95rem}
+@keyframes islandContent{from{opacity:0;transform:scale(.85);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes islandContentOut{to{opacity:0;transform:scale(.9);filter:blur(3px)}}
+@keyframes chestHop{0%{transform:translateY(10px) scale(.6)}60%{transform:translateY(-4px) scale(1.08)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.score-island-body,.score-island-chest,.score-bar.bump *{animation:none}}

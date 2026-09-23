@@ -3,8 +3,11 @@ import { CheckCircle2, Eraser, Hand, Lightbulb, RotateCcw, Volume2 } from 'lucid
 import { PERSIAN_LETTERS, HARAKAT_LIST } from '../data/persianAlphabet';
 import { FIRST_GRADE_WORDS } from '../data/words';
 import { PersianLetter, PlacedMagneticPiece, WordItem } from '../types';
-import { clusterPieces, computePersianForms, findSnapCandidate, getHarakatById, getLetterById, getLetterGlyph } from '../utils/persianEngine';
+import { clusterPieces, computePersianForms, findSnapCandidate, getHarakatById, getLetterById, getLetterGlyph, normalizePersian } from '../utils/persianEngine';
 import { sound } from '../utils/audio';
+import { toFa, useCurrentLesson } from '../utils/lessonState';
+import { boardLessonWords } from '../data/wordBank';
+import { plainWord, tashdidProfile } from '../utils/pieces';
 
 interface Props { onActivityComplete: (type: 'letter'|'word', id?: string) => void }
 type Category = 'all'|'vowel'|'consonant'|'harakat';
@@ -13,6 +16,7 @@ type TrayPayload = { type:'letter'|'harakat'|'combo'; id:string; preferredForm?:
 const uid = () => `piece_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 
 export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
+  const [lessonOrder] = useCurrentLesson();
   const boardRef = useRef<HTMLDivElement>(null);
   const celebrated = useRef(new Set<string>());
   const dragStart = useRef<{x:number;y:number;positions:Map<string,{x:number;y:number}>}>({x:0,y:0,positions:new Map()});
@@ -23,20 +27,53 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
   const [selectedLetter, setSelectedLetter] = useState<PersianLetter|null>(null);
   const [challengeIndex, setChallengeIndex] = useState(0);
   const [guided, setGuided] = useState(false);
+  const [challengeRevealed, setChallengeRevealed] = useState(false);
+  const [wrongTashdid, setWrongTashdid] = useState(false);
   const [toast, setToast] = useState<WordItem|null>(null);
+  const autoTimer = useRef(0);
+  const mistakeKeys = useRef(new Set<string>());
+  useEffect(() => () => window.clearTimeout(autoTimer.current), []);
+  useEffect(() => { setChallengeRevealed(false); }, [challengeIndex]);
 
-  const clusters = useMemo(() => clusterPieces(pieces, FIRST_GRADE_WORDS), [pieces]);
-  const challenge = FIRST_GRADE_WORDS[challengeIndex % FIRST_GRADE_WORDS.length];
+  const lessonWords = useMemo(() => {
+    const allowed = new Set(boardLessonWords(lessonOrder).map(w => w.plain));
+    const list = FIRST_GRADE_WORDS.filter(w => allowed.has(plainWord(w.word)));
+    return list.length ? list : FIRST_GRADE_WORDS.slice(0, 1);
+  }, [lessonOrder]);
+  const clusters = useMemo(() => clusterPieces(pieces, lessonWords), [pieces, lessonWords]);
+  const challenge = lessonWords[challengeIndex % lessonWords.length];
+
+  useEffect(() => {
+    setChallengeIndex(0); setPieces([]); celebrated.current.clear();
+    mistakeKeys.current.clear(); setWrongTashdid(false);
+  }, [lessonOrder]);
 
   useEffect(() => {
     const match = clusters.find(c => c.matchedWord && !celebrated.current.has(`${c.id}:${c.normalizedText}`));
+    const mismatch = clusters.find(c => {
+      if (!c.normalizedText) return false;
+      const expected = lessonWords.find(w => normalizePersian(w.word) === c.normalizedText);
+      return Boolean(expected && tashdidProfile(expected.word) && tashdidProfile(expected.word) !== tashdidProfile(c.connectedText));
+    });
+    if (mismatch) {
+      const key = `${mismatch.id}:${mismatch.connectedText}`;
+      if (!mistakeKeys.current.has(key)) {
+        mistakeKeys.current.add(key);
+        setWrongTashdid(true);
+        sound.playGentleHint();
+        sound.speakPersian('دوباره تلاش کن. تشدید را دقیقاً بالای همان حرف بگذار.');
+        window.setTimeout(() => setWrongTashdid(false), 2800);
+      }
+    }
     if (!match?.matchedWord) return;
     celebrated.current.add(`${match.id}:${match.normalizedText}`);
     setToast(match.matchedWord); sound.playSuccess(); sound.speakPersian(`آفرین! کلمه ${match.matchedWord.word} رو ساختی`);
     onActivityComplete('word', match.matchedWord.id);
+    // تمرین با راهنما: بعد از ساختن واژهٔ خواسته‌شده، خودکار واژهٔ بعدی
+    if (guided && match.matchedWord.id === challenge.id) { window.clearTimeout(autoTimer.current); autoTimer.current = window.setTimeout(() => { setChallengeIndex(i => i + 1); setPieces([]); celebrated.current.clear(); setToast(null); }, 2600); }
     const timer = window.setTimeout(() => setToast(null), 4200);
     return () => window.clearTimeout(timer);
-  }, [clusters, onActivityComplete]);
+  }, [clusters, onActivityComplete, guided, challenge.id]);
 
   useEffect(() => {
     const clamp = () => {
@@ -146,7 +183,9 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
 
     <div ref={boardRef} className="word-board" onPointerMove={movePiece} onPointerUp={endPieceDrag} onPointerCancel={endPieceDrag} onDragOver={e=>e.preventDefault()} onDrop={drop}>
       <div className="board-baseline"/>
-      {guided&&<button className="challenge-chip" onClick={()=>sound.speakPersian(challenge.word)}><span>{challenge.imageEmoji}</span><b>{challenge.word}</b><Volume2/></button>}
+      {guided&&<button className="challenge-chip" onClick={()=>{setChallengeRevealed(true);sound.speakPersian(challenge.word)}} aria-label={`کلمهٔ ${toFa(challengeIndex + 1)}، برای دیدن نوشته لمس کن`}>
+        <span>{challenge.imageEmoji}</span><small>کلمهٔ {toFa(challengeIndex + 1)}</small><b className={challengeRevealed?'revealed':''}>{challenge.word}</b><Volume2/>
+      </button>}
       {snap&&<span className="snap-ring" style={{left:snap.x,top:snap.y}}/>}
       {pieces.map(piece=>{
         const isDrag=piece.id===draggingId;
@@ -163,6 +202,7 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
       </div>
       {clusters.some(c=>c.matchedWord)&&<div className="recognized-ribbon">{clusters.filter(c=>c.matchedWord).map(c=><button key={c.id} onClick={()=>sound.speakPersian(c.matchedWord!.word)}><CheckCircle2/> {c.matchedWord!.word}</button>)}</div>}
       {toast&&<div className="praise-toast" role="status"><span>{toast.imageEmoji}</span><div><b>آفرین! 👏</b><small>کلمه «{toast.word}» رو ساختی</small></div></div>}
+      {wrongTashdid&&<div className="praise-toast mistake-toast" role="status"><span>🔁</span><div><b>دوباره تلاش کن</b><small>تشدید را دقیقاً بالای همان حرف بگذار</small></div></div>}
     </div>
 
     <footer className="letter-tray">
@@ -174,7 +214,7 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
         {category==='harakat' ? HARAKAT_LIST.map(h=><TrayButton key={h.id} label={h.name.split(' ')[0]} glyph={h.symbol} color={h.color} payload={{type:'harakat',id:h.id}} add={addPayload} drag={trayDrag}/>) : filtered.map(l=><button key={l.id} className="letter-key" style={{'--key-color':l.color} as React.CSSProperties} onClick={()=>setSelectedLetter(l)}><span>{l.isolated}</span><small>{l.name}</small></button>)}
       </div>}
     </footer>
-    {guided&&<div className="challenge-next"><span>{challenge.imageEmoji} «{challenge.word}» را بساز</span><button onClick={()=>{setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
+    {guided&&<div className="challenge-next"><span>{challenge.imageEmoji} کلمهٔ {toFa(challengeIndex + 1)} را بساز</span><button onClick={()=>{window.clearTimeout(autoTimer.current);setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
   </section>;
 };
 

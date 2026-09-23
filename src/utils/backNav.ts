@@ -18,7 +18,13 @@ function runBack(): boolean {
   return false;
 }
 
-async function exitApp() {
+/** وقتی کودک در آخرین صفحه باز هم «برگشت» بزند، به جای بستن ناگهانی، پنجرهٔ «میخوای بری؟» باز می‌شود */
+type ExitListener = () => void;
+const exitListeners = new Set<ExitListener>();
+export function onExitRequest(fn: ExitListener): () => void { exitListeners.add(fn); return () => { exitListeners.delete(fn); }; }
+function requestExit() { if (exitListeners.size) exitListeners.forEach(l => l()); else exitApp(); }
+
+export async function exitApp() {
   try {
     const { App } = await import('@capacitor/app');
     await App.exitApp();
@@ -32,7 +38,7 @@ export function initBackNavigation() {
   const isNative = !!cap?.isNativePlatform?.();
   if (isNative) {
     import('@capacitor/app').then(({ App }) => {
-      App.addListener('backButton', () => { if (!runBack()) exitApp(); });
+      App.addListener('backButton', () => { if (!runBack()) requestExit(); });
     }).catch(() => { /* پلاگین نصب نیست */ });
     return;
   }
@@ -40,7 +46,8 @@ export function initBackNavigation() {
   try {
     history.pushState({ alefba: true }, '');
     window.addEventListener('popstate', () => {
-      if (runBack()) history.pushState({ alefba: true }, '');
+      if (!runBack()) requestExit();
+      history.pushState({ alefba: true }, '');
     });
   } catch { /* ignore */ }
 }

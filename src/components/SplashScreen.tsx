@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X } from 'lucide-react';
 import { sound } from '../utils/audio';
 import { useBackHandler } from '../utils/backNav';
-import { CloseArt, OkArt } from './shared/ArtButtons';
+import { CloseArt } from './shared/ArtButtons';
+import { SettingsPanel } from './SettingsPanel';
 
 interface SplashProps {
   /** دکمهٔ سبز بزرگ: رفتن به نقشهٔ دهکده‌ها برای انتخاب نوع بازی */
@@ -20,7 +20,6 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
   const [showStart, setShowStart] = useState(skipNativeSplash);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
   useBackHandler(() => { setSettingsOpen(false); }, settingsOpen);
   useBackHandler(() => { setMenuOpen(false); }, menuOpen && !settingsOpen);
 
@@ -39,11 +38,12 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
   }
 
   const tap = (fn: () => void) => () => { sound.playPop(); fn(); };
-  const toggleSound = () => { setSoundOn(v => !v); sound.playPop(); };
 
   return <main className="start-screen" dir="rtl">
-    <img className="start-background" src="/assets/start-children.png" alt="دختر و پسر دانش‌آموز در دهکده الفبا" />
-    <img className="start-sign" src="/assets/ui/start-sign.svg" alt="دهکده الفبا" />
+    <div className="start-art-frame">
+      <img className="start-app-art" src="/assets/app-icon.png" alt="دهکده الفبا" />
+      <span className="start-art-shine" aria-hidden="true" />
+    </div>
 
     {/* نوار سفید موج‌دار پایین با سه دکمه، دقیقاً مثل تصویر مرجع */}
     <section className="start-dock" aria-label="منوی شروع بازی">
@@ -68,14 +68,13 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
       <span className="menu-spark s1" aria-hidden="true">★</span><span className="menu-spark s2" aria-hidden="true">★</span><span className="menu-spark s3" aria-hidden="true">★</span>
       <div className="menu-book" onClick={e => e.stopPropagation()}>
         <img className="menu-book-art" src="/assets/ui/menu-panel.svg" alt="" draggable={false} />
-        <CloseArt className="menu-book-close" onClick={tap(() => setMenuOpen(false))} label="بستن منو" />
+        <CloseArt className="menu-book-close" src="/assets/ui/btn-close-menu.svg" onClick={tap(() => setMenuOpen(false))} label="بستن منو" />
         <button className="menu-book-btn menu-book-play" onClick={tap(onStart)} aria-label="شروع بازی و رفتن به دهکده‌ها">
           <img src="/assets/ui/menu-play.svg" alt="" draggable={false} />
         </button>
-        <button className="menu-book-btn menu-book-cont" onClick={tap(onContinue)} aria-label={resumeLabel ? `ادامهٔ بازی: ${resumeLabel}` : 'ادامهٔ بازی'}>
+        <button className="menu-book-btn menu-book-cont" onClick={tap(onContinue)} aria-label="ادامهٔ بازی">
           <img src="/assets/ui/btn-continue.svg" alt="" draggable={false} />
         </button>
-        {resumeLabel && <small className="menu-book-resume">{resumeLabel}</small>}
         <button className="menu-book-btn menu-book-progress" onClick={tap(onProgress)} aria-label="پیشرفت من">
           <img src="/assets/ui/btn-progress.svg" alt="" draggable={false} />
         </button>
@@ -85,22 +84,6 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
       </div>
     </div>}
 
-    {settingsOpen && <div className="settings-backdrop" role="presentation" onClick={() => setSettingsOpen(false)}>
-      <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={e => e.stopPropagation()}>
-        <CloseArt className="settings-close" onClick={() => setSettingsOpen(false)} />
-        <img className="settings-icon" src="/assets/ui/start-settings.svg" alt="" />
-        <h2 id="settings-title">تنظیمات</h2>
-        <p>اینجا تنظیمات بازی را کنترل کن.</p>
-        <button className={`settings-row ${soundOn ? 'enabled' : 'disabled'}`} onClick={toggleSound}>
-          <span><b>صدای بازی</b><small>{soundOn ? 'روشن' : 'خاموش'}</small></span>
-          <i>{soundOn ? <Check /> : <X />}</i>
-        </button>
-        <button className="settings-row" onClick={() => sound.speakPersian('به دهکده الفبا خوش آمدی')}>
-          <span><b>آزمایش صدا</b><small>پخش پیام خوش‌آمدگویی</small></span>
-          <i>▶</i>
-        </button>
-        <OkArt className="settings-ok" onClick={() => setSettingsOpen(false)} label="ذخیره و بستن" caption="ذخیره" />
-      </section>
-    </div>}
+    {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
   </main>;
 };

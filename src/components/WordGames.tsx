@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Volume2, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, Shuffle } from 'lucide-react';
 import { FIRST_GRADE_WORDS } from '../data/words';
 import { PERSIAN_LETTERS, toPersianDigits } from '../data/persianAlphabet';
@@ -6,14 +6,26 @@ import { WordItem, PersianLetter } from '../types';
 import { getLetterById, computePersianForms, getLetterGlyph } from '../utils/persianEngine';
 import { sound } from '../utils/audio';
 import { MascotGuide } from './MascotGuide';
+import { boardLessonWords } from '../data/wordBank';
+import { useCurrentLesson } from '../utils/lessonState';
+import { plainWord } from '../utils/pieces';
 
 interface WordGamesProps {
   onActivityComplete: (type: 'word', id?: string) => void;
 }
 
 export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
+  const [lessonOrder] = useCurrentLesson();
+  const availableWords = useMemo(() => {
+    const allowed = new Set(boardLessonWords(lessonOrder).map(w => w.plain));
+    const exact = FIRST_GRADE_WORDS.filter(w => allowed.has(plainWord(w.word)));
+    return exact.length ? exact : FIRST_GRADE_WORDS.filter(w => {
+      const plain = plainWord(w.word);
+      return boardLessonWords(lessonOrder).some(source => source.lesson <= lessonOrder && source.plain === plain);
+    });
+  }, [lessonOrder]);
   const [wordIndex, setWordIndex] = useState(0);
-  const activeWord: WordItem = FIRST_GRADE_WORDS[wordIndex % FIRST_GRADE_WORDS.length];
+  const activeWord: WordItem = availableWords[wordIndex % Math.max(1, availableWords.length)] || FIRST_GRADE_WORDS[0];
 
   // Missing slot index
   const missingSlot = activeWord.missingIndex ?? 0;
@@ -26,6 +38,9 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
 
   // Generate 3 choices: the correct letter + 2 random distractors
   const [options, setOptions] = useState<PersianLetter[]>([]);
+  const autoTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(autoTimer.current), []);
+  useEffect(() => { setWordIndex(0); }, [lessonOrder]);
 
   useEffect(() => {
     setIsSolved(false);
@@ -34,14 +49,15 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
     const correct = missingLetterDef;
     if (!correct) return;
 
-    // Pick 2 other random letters
-    const otherLetters = PERSIAN_LETTERS.filter((l) => l.id !== correct.id);
+    // حروف انحرافی هم فقط از نشانه‌های واژه‌های همین درس و پیش‌نیازهایش باشند
+    const learnedIds = new Set(availableWords.flatMap(w => w.letters));
+    const otherLetters = PERSIAN_LETTERS.filter((l) => l.id !== correct.id && learnedIds.has(l.id));
     const shuffledOthers = [...otherLetters].sort(() => 0.5 - Math.random());
-    const choices = [correct, shuffledOthers[0], shuffledOthers[1]].sort(() => 0.5 - Math.random());
+    const choices = [correct, shuffledOthers[0] || PERSIAN_LETTERS.find(l => l.id !== correct.id), shuffledOthers[1] || PERSIAN_LETTERS.find(l => l.id !== correct.id && l.id !== shuffledOthers[0]?.id)].filter((l): l is PersianLetter => Boolean(l)).sort(() => 0.5 - Math.random());
     setOptions(choices);
 
     sound.speakPersian(`جای خالی در کلمه ${activeWord.word} را با حرف مناسب پر کن.`);
-  }, [wordIndex, activeWord.id]);
+  }, [wordIndex, activeWord.id, lessonOrder]);
 
   // Handle option selection
   const handleSelectOption = (chosen: PersianLetter) => {
@@ -54,6 +70,7 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
       setIsSolved(true);
       sound.speakPersian(activeWord.word);
       onActivityComplete('word', activeWord.id);
+      window.clearTimeout(autoTimer.current); autoTimer.current = window.setTimeout(() => setWordIndex((p) => (p + 1) % Math.max(1, availableWords.length)), 2000);
     } else {
       // Gentle hint (never harsh or punishing)
       sound.playGentleHint();
@@ -64,13 +81,15 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
   };
 
   const handleNextWord = () => {
+    window.clearTimeout(autoTimer.current);
     sound.playPop();
-    setWordIndex((p) => (p + 1) % FIRST_GRADE_WORDS.length);
+    setWordIndex((p) => (p + 1) % Math.max(1, availableWords.length));
   };
 
   const handlePrevWord = () => {
+    window.clearTimeout(autoTimer.current);
     sound.playPop();
-    setWordIndex((p) => (p - 1 + FIRST_GRADE_WORDS.length) % FIRST_GRADE_WORDS.length);
+    setWordIndex((p) => (p - 1 + Math.max(1, availableWords.length)) % Math.max(1, availableWords.length));
   };
 
   // Convert the word's letter sequence into displayable glyphs with missing blank slot
@@ -120,7 +139,7 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
         {/* Top Word Level & Sound Tag */}
         <div className="flex items-center justify-between w-full max-w-md">
           <span className="px-3 py-1 bg-amber-100 border border-amber-300 rounded-xl text-xs font-bold text-amber-900">
-            کلمه {toPersianDigits(wordIndex + 1)} از {toPersianDigits(FIRST_GRADE_WORDS.length)}
+            کلمهٔ {toPersianDigits(wordIndex % Math.max(1, availableWords.length) + 1)}
           </span>
 
           <button

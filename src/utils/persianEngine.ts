@@ -1,5 +1,6 @@
 import { PERSIAN_LETTERS, HARAKAT_LIST } from '../data/persianAlphabet';
 import { PersianLetter, HarakatSymbol, PlacedMagneticPiece, WordItem } from '../types';
+import { tashdidProfile } from './pieces';
 
 export interface ClusterInfo {
   id: string;
@@ -13,6 +14,8 @@ export interface ClusterInfo {
 export const SNAP_DISTANCE_X = 82;
 export const SNAP_DISTANCE_Y = 54;
 export const HARAKAT_SNAP_DIST = 62;
+export const TASHDID_SNAP_X = 28;
+export const TASHDID_SNAP_Y = 28;
 export const CONNECTED_SPACING = 50;
 export const NON_CONNECTED_SPACING = 64;
 
@@ -59,7 +62,13 @@ export function findSnapCandidate(dragged: PlacedMagneticPiece, pieces: PlacedMa
     let best: SnapTargetResult | null = null;
     let distance = Infinity;
     for (const target of others.filter(p => p.type === 'letter')) {
-      const d = Math.hypot(dragged.x - target.x, dragged.y - target.y);
+      const isTashdid = mark.id === 'tashdid';
+      const expectedY = target.y - 34;
+      const dx = dragged.x - target.x;
+      const dy = dragged.y - target.y;
+      const tashdidDy = dragged.y - expectedY;
+      if (isTashdid && (dragged.y >= target.y || Math.abs(dx) > TASHDID_SNAP_X || Math.abs(tashdidDy) > TASHDID_SNAP_Y)) continue;
+      const d = isTashdid ? Math.hypot(dx, tashdidDy) : Math.hypot(dx, dy);
       if (d < HARAKAT_SNAP_DIST && d < distance) {
         distance = d;
         best = { targetPiece: target, snapType: 'harakat_attach', snapX: target.x, snapY: target.y + (mark.position === 'above' ? -34 : 34) };
@@ -119,7 +128,12 @@ export function clusterPieces(pieces: PlacedMagneticPiece[], dictionary: WordIte
         .forEach(m => { text += getHarakatById(m.harakatId || '')?.symbol || ''; });
     }
     const normalized = normalizePersian(text);
-    const matchedWord = dictionary.find(w => normalizePersian(w.word) === normalized || (w.acceptedForms || []).some(f => normalizePersian(f) === normalized));
+    const matchedWord = dictionary.find(w => {
+      const sameBase = normalizePersian(w.word) === normalized || (w.acceptedForms || []).some(f => normalizePersian(f) === normalized);
+      if (!sameBase) return false;
+      const expectedTashdid = tashdidProfile(w.word);
+      return !expectedTashdid || expectedTashdid === tashdidProfile(text);
+    });
     result.push({ id: `cluster_${group.map(p => p.id).join('_')}`, pieces: [...group, ...marks], connectedText: text, normalizedText: normalized, hasDiacritics: marks.length > 0, matchedWord });
   }
   return result;

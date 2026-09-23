@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Eraser, RefreshCw, Volume2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Eraser, RefreshCw, Volume2 } from 'lucide-react';
 import { CURRICULUM, CurriculumLesson, LikeWord } from '../data/curriculum';
-import { WORD_BANK } from '../data/wordBank';
+import { boardLessonWords, WORD_BANK } from '../data/wordBank';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
 import { LessonPicker, LessonSheet } from './shared/LessonPicker';
@@ -12,6 +12,7 @@ import { useBackHandler } from '../utils/backNav';
 import { setStatusBarColor, vibrate } from '../utils/native';
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 import { CloseArt, OkArt } from './shared/ArtButtons';
+import { SyllableGame } from './SyllableGame';
 
 type Place = { left: number; top: number; w: number; ratio: number; bb: [number, number, number, number] };
 const HR = 258 / 246;
@@ -22,9 +23,14 @@ const houses = [
   { id: 'hunt' as const, title: 'بازی دوم', subtitle: 'حرف را پیدا کن', emoji: '🔎', asset: '/assets/letters-house-3.webp', tone: 'green', place: { left: 43.11, top: 22.66, w: 44.12, ratio: HR, bb: [19.0, 75.7, 9.7, 79.2] } as Place },
   { id: 'like' as const, title: 'بازی سوم', subtitle: 'چی مثلِ چی؟', emoji: '🧩', asset: '/assets/letters-house-5.webp', tone: 'blue', place: { left: 21.16, top: 37.86, w: 44.31, ratio: HR, bb: [20.0, 82.2, 10.0, 90.6] } as Place },
   { id: 'flash' as const, title: 'بازی چهارم', subtitle: 'فلش‌کارت', emoji: '🃏', asset: '/assets/letters-house-2.webp', tone: 'violet', place: { left: 41.24, top: 54.56, w: 43.76, ratio: HR, bb: [11.0, 87.3, 17.3, 73.9] } as Place },
+  /* خانهٔ پنجم (جای «خانهٔ درس‌ها»): تمرین هجا / بخش‌بخش کردن و جدا کردن صداها؛ انتخاب درس از دکمهٔ «نشانهٔ امروز» */
+  { id: 'syllable' as const, title: 'بازی پنجم', subtitle: 'بخش و ترکیب', emoji: '✂️', asset: '/assets/letters-house-1.webp', tone: 'sun', place: { left: 41.13, top: 75.40, w: 43.56, ratio: HR, bb: [16.0, 89.0, 23.2, 75.8] } as Place },
 ] as const;
-const LESSON_HOUSE = { asset: '/assets/letters-house-1.webp', place: { left: 41.13, top: 75.40, w: 43.56, ratio: HR, bb: [16.0, 89.0, 23.2, 75.8] } as Place };
 type House = typeof houses[number]['id'];
+
+const FormRun: React.FC<{ forms: string[]; className?: string }> = ({ forms, className = '' }) => (
+  <span className={`lesson-form-run ${className}`}>{forms.map((form, i) => <span key={`${form}-${i}`}>{form}</span>)}</span>
+);
 
 export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => void; onComplete: (t: 'letter' | 'word', id?: string) => void }> = ({ onBack, onHome, onComplete }) => {
   const [house, setHouse] = useState<House | null>(null);
@@ -50,12 +56,13 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
         {house === 'hunt' && <LetterHunt key={lesson.id} lesson={lesson} onDone={done} />}
         {house === 'like' && <LikeWhat key={lesson.id} lesson={lesson} onDone={done} />}
         {house === 'flash' && <FlashCards key={lesson.id} lesson={lesson} />}
+        {house === 'syllable' && <SyllableGame key={lesson.id} lesson={lesson} onDone={done} />}
       </div>
     </main>;
   }
   return <MapScreen id="letters" map="/assets/letters-map.webp" alt="مسیر دهکده آشنایی با حروف" overlay={<>
     <header className="map-topbar">
-      <button className="kid-round-btn back big" onClick={() => { sound.playPop(); onBack(); }} aria-label="بازگشت به نقشهٔ جزیره"><ArrowRight strokeWidth={3.2} /></button>
+      <button className="kid-back-btn big" onClick={() => { sound.playPop(); onBack(); }} aria-label="بازگشت به نقشهٔ جزیره"><img className="kid-back-art" src="/assets/ui/btn-back.svg" alt="" draggable={false} /></button>
       <div className="map-title-ribbon coral"><small>دهکدهٔ اول</small><strong>آشنایی با حروف</strong></div>
       <button className="map-svg-button" onClick={() => { sound.playPop(); setHelpOpen(true); }} aria-label="راهنما"><img src="/assets/letters-help.svg" alt="راهنما" /></button>
     </header>
@@ -70,10 +77,18 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
     </section></div>}
   </>}>
     {/* از پایین به بالا در DOM تا لایه‌بندیِ هم‌پوشانیِ خانه‌ها مثل قبل بماند */}
-    <MapSpot place={LESSON_HOUSE.place} art={LESSON_HOUSE.asset} index={4} title="خانهٔ درس‌ها" subtitle="درس را انتخاب کن" tone="sun" badge="📅" onClick={() => { sound.playPop(); setLessonsOpen(true); }} />
     {houses.map((h, i) => ({ h, i })).reverse().map(({ h, i }) => <MapSpot key={h.id} place={h.place} art={h.asset} index={i} title={h.title} subtitle={h.subtitle} tone={h.tone} hint={i === 0} onClick={() => chooseHouse(h.id)} />)}
   </MapScreen>;
 };
+
+/** بعد از تمام شدن هر تمرین، خودکار سراغ تمرین بعدی می‌رود (تایمر با خروج از بازی پاک می‌شود) */
+export function useAutoNext() {
+  const t = useRef(0);
+  useEffect(() => () => window.clearTimeout(t.current), []);
+  const fn = useCallback((next: () => void, ms = 1800) => { window.clearTimeout(t.current); t.current = window.setTimeout(next, ms); }, []) as ((next: () => void, ms?: number) => void) & { cancel: () => void };
+  fn.cancel = () => window.clearTimeout(t.current);
+  return fn;
+}
 
 /* ------------------------------------------------------------------ */
 /* تمرین ۱: شکل پررنگ بالا، شکل توخالی/خط‌چین بزرگ پایین، دست‌کشیدن و «انجام دادم»
@@ -278,13 +293,14 @@ const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = (
   const [wrong, setWrong] = useState<number | null>(null);
   const [fb, setFb] = useState<FeedbackState>(null);
   const total = cells.filter(c => c.isTarget).length;
+  const autoNext = useAutoNext();
   useEffect(() => { setFound([]); sound.speakPersian(`نشانهٔ ${lesson.spoken} را پیدا کن`); }, [round]); // eslint-disable-line
 
   const tap = (c: typeof cells[number]) => {
     if (found.includes(c.id)) return;
     if (c.isTarget) {
       const n = [...found, c.id]; setFound(n); sound.playPop();
-      if (n.length === total) { sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} همه را پیدا کردی.` }); onDone(); }
+      if (n.length === total) { sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} همه را پیدا کردی.` }); onDone(); autoNext(() => setRound(r => r + 1)); }
     } else { setWrong(c.id); sound.speakPersian('این نیست'); window.setTimeout(() => setWrong(null), 600); }
   };
 
@@ -297,27 +313,43 @@ const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = (
     <div className="hunt-field" aria-label="حروف درهم">
       {cells.map(c => <button key={c.id} className={`hunt-glyph tahriri ${found.includes(c.id) ? 'found' : ''} ${wrong === c.id ? 'wrong' : ''}`} style={{ transform: `translate(${c.dx}%, ${c.dy}%) rotate(${c.rot}deg) scale(${c.scale})` }} onClick={() => tap(c)}>{c.g}</button>)}
     </div>
-    <div className="hunt-footer"><span>{toFa(found.length)} از {toFa(total)} پیدا شد</span><button className="soft-btn" onClick={() => setRound(r => r + 1)}><RefreshCw /> دور بعد</button></div>
+    <div className="hunt-footer"><span>{toFa(found.length)} از {toFa(total)} پیدا شد</span><button className="soft-btn" onClick={() => { autoNext.cancel(); setRound(r => r + 1); }}><RefreshCw /> دور بعد</button></div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
   </div>;
 };
 
 /* ------------------------------------------------------------------ */
 /* تمرین ۳: «آ» مثلِ ...؟ انتخاب همهٔ کلمه‌های درست */
-const ALL_LIKE: LikeWord[] = (() => { const m = new Map<string, LikeWord>(); CURRICULUM.forEach(l => l.likeWords.forEach(w => { if (w.emoji && !m.has(w.word)) m.set(w.word, w); })); return [...m.values()]; })();
 const hasSign = (lesson: CurriculumLesson, word: string) => lesson.chars.some(ch => word.includes(ch)) || (lesson.order === 1 && word.includes('آ'));
+
+/** واژه‌های تصویریِ همین نشانه و پیش‌نیازهایش، فقط از فهرست کتابی تختهٔ واژه‌ها */
+const lessonPictureWords = (order: number): LikeWord[] => {
+  const seen = new Set<string>();
+  const out: LikeWord[] = [];
+  for (let n = 1; n <= order; n++) {
+    boardLessonWords(n).forEach(w => {
+      if (w.emoji && w.lesson <= order && !seen.has(w.plain)) {
+        seen.add(w.plain);
+        out.push({ word: w.word, emoji: w.emoji });
+      }
+    });
+  }
+  return out.sort((a, b) => [...a.word].length - [...b.word].length);
+};
 
 const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ lesson, onDone }) => {
   const [round, setRound] = useState(0);
+  const bookWords = useMemo(() => lessonPictureWords(lesson.order), [lesson.order]);
   const options = useMemo(() => {
-    const correct = shuffle(lesson.likeWords.filter(w => w.emoji)).slice(0, 3);
-    const wrong = shuffle(ALL_LIKE.filter(w => !hasSign(lesson, w.word))).slice(0, 6 - correct.length);
+    const correct = shuffle(bookWords.filter(w => hasSign(lesson, w.word))).slice(0, 3);
+    const wrong = shuffle(bookWords.filter(w => !hasSign(lesson, w.word))).slice(0, 6 - correct.length);
     return shuffle([...correct.map(w => ({ ...w, ok: true })), ...wrong.map(w => ({ ...w, ok: false }))]);
-  }, [lesson, round]);
+  }, [lesson, bookWords, round]);
   const [picked, setPicked] = useState<string[]>([]);
   const [shake, setShake] = useState<string | null>(null);
   const [fb, setFb] = useState<FeedbackState>(null);
   const need = options.filter(o => o.ok).length;
+  const autoNext = useAutoNext();
   useEffect(() => { setPicked([]); sound.speakPersian(`${lesson.spoken} مثلِ؟`); }, [round]); // eslint-disable-line
 
   const choose = (o: typeof options[number]) => {
@@ -325,19 +357,19 @@ const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ 
     sound.speakPersian(o.word.replace(/[\u064B-\u0652]/g, ''));
     if (o.ok) {
       const n = [...picked, o.word]; setPicked(n); sound.playPop();
-      if (n.length === need) { sound.playSuccess(); const p = praise(); setFb({ tone: 'good', text: `${p} همهٔ کلمه‌های «${lesson.sign}» را پیدا کردی.` }); onDone(); }
+      if (n.length === need) { sound.playSuccess(); const p = praise(); setFb({ tone: 'good', text: `${p} همهٔ کلمه‌های «${lesson.sign}» را پیدا کردی.` }); onDone(); autoNext(() => setRound(r => r + 1)); }
     } else { setShake(o.word); setFb({ tone: 'try', text: `«${o.word}» صدای «${lesson.sign}» ندارد. ${cheer()}` }); window.setTimeout(() => setShake(null), 650); }
   };
 
   return <div className="mini-game like-game">
-    <h2 className="like-prompt"><b className="tahriri">{lesson.forms.join(' ')}</b> مثلِ ...؟</h2>
+    <h2 className="like-prompt"><b className="tahriri"><FormRun forms={lesson.forms} /></b> مثلِ ...؟</h2>
     <p className="game-hint">کلمه‌هایی را انتخاب کن که صدای «{lesson.sign}» دارند ({toFa(picked.length)} از {toFa(need)})</p>
     <div className="like-grid">
       {options.map(o => <button key={o.word} className={`like-card ${picked.includes(o.word) ? 'picked' : ''} ${shake === o.word ? 'wrong' : ''}`} onClick={() => choose(o)}>
         <span className="like-emoji">{o.emoji}</span><b className="tahriri">{o.word}</b>{picked.includes(o.word) && <i><Check /></i>}
       </button>)}
     </div>
-    <div className="hunt-footer"><span /><button className="soft-btn" onClick={() => setRound(r => r + 1)}><RefreshCw /> کلمه‌های تازه</button></div>
+    <div className="hunt-footer"><span /><button className="soft-btn" onClick={() => { autoNext.cancel(); setRound(r => r + 1); }}><RefreshCw /> کلمه‌های تازه</button></div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
   </div>;
 };
@@ -345,16 +377,21 @@ const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ 
 /* ------------------------------------------------------------------ */
 /* تمرین ۴: فلش‌کارت؛ رو: «نـ ن مثلِ؟» — پشت: تصویر و نوشتهٔ کلمه */
 const FlashCards: React.FC<{ lesson: CurriculumLesson }> = ({ lesson }) => {
-  const cards = lesson.likeWords;
+  const cards = useMemo(() => {
+    const current = lessonPictureWords(lesson.order).filter(w => hasSign(lesson, w.word));
+    return current.length ? current : [{ word: 'آب', emoji: '💧' }];
+  }, [lesson]);
   const [i, setI] = useState(0);
   const [flip, setFlip] = useState(false);
   const card = cards[i % cards.length];
-  const go = (d: number) => { setFlip(false); window.setTimeout(() => setI(x => (x + d + cards.length) % cards.length), 180); sound.playPop(); };
-  const toggle = () => { setFlip(f => { if (!f) sound.speakPersian(card.word.replace(/[\u064B-\u0652]/g, '')); else sound.speakPersian(`${lesson.spoken} مثلِ؟`); return !f; }); };
+  const autoNext = useAutoNext();
+  const go = (d: number) => { autoNext.cancel(); setFlip(false); window.setTimeout(() => setI(x => (x + d + cards.length) % cards.length), 180); sound.playPop(); };
+  // بعد از دیدن جواب (پشت کارت)، خودکار کارت بعدی می‌آید
+  const toggle = () => { const toBack = !flip; setFlip(toBack); if (toBack) { sound.speakPersian(card.word.replace(/[\u064B-\u0652]/g, '')); autoNext(() => go(1), 2600); } else { autoNext.cancel(); sound.speakPersian(`${lesson.spoken} مثلِ؟`); } };
   return <div className="mini-game flash-game">
-    <div className={`flash-card ${flip ? 'flipped' : ''}`} onClick={toggle} role="button" aria-label="کارت را برگردان">
-      <div className="flash-face front"><b className="tahriri">{lesson.forms.join(' ')}</b><span>مثلِ ...؟</span><small>برای دیدن جواب، روی کارت بزن</small></div>
-      <div className="flash-face back"><span className="flash-emoji">{card.emoji}</span><b className="tahriri">{card.word}</b><small className="tahriri">{lesson.forms.join(' ')} مثلِ {card.word}</small></div>
+      <div className={`flash-card ${flip ? 'flipped' : ''}`} onClick={toggle} role="button" aria-label="کارت را برگردان">
+      <div className="flash-face front"><b className="tahriri"><FormRun forms={lesson.forms} /></b><span>مثلِ ...؟</span><small>برای دیدن جواب، روی کارت بزن</small></div>
+      <div className="flash-face back"><span className="flash-emoji">{card.emoji}</span><b className="tahriri">{card.word}</b><small className="tahriri"><FormRun forms={lesson.forms} /> مثلِ {card.word}</small></div>
     </div>
     <div className="flash-nav">
       <button className="soft-btn" onClick={() => go(-1)}><ChevronRight /> قبلی</button>

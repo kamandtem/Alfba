@@ -130,10 +130,14 @@ export function plainWord(s: string): string {
 }
 export const plainSequence = (seq: PieceDef[]) => plainWord(seq.filter(p => p.kind !== 'mark').map(p => p.base).join(''));
 
-/** تبدیل یک واژهٔ اعراب‌دار به قطعه‌های آموزشی (برای چیدن خودکار روی تخته) */
-export function wordToTokens(word: string): string[] {
+/** یک قطعه همراه با بازهٔ نویسه‌هایش در واژه (برای دیکته: کدام قطعه نشانهٔ درس است) */
+export interface TokenSpan { token: string; start: number; end: number }
+
+/** تبدیل یک واژهٔ اعراب‌دار به قطعه‌های آموزشی، همراه با جای هر قطعه در واژه */
+export function wordToTokenSpans(word: string): TokenSpan[] {
   const chars = [...word];
-  const tokens: string[] = [];
+  const spans: TokenSpan[] = [];
+  const push = (token: string, start: number, end: number) => spans.push({ token, start, end });
   const nextLetterExists = (j: number) => {
     for (let k = j; k < chars.length; k++) {
       if (chars[k] === ZWNJ) return false;
@@ -146,20 +150,43 @@ export function wordToTokens(word: string): string[] {
   for (let i = 0; i < chars.length; i++) {
     const c = chars[i];
     if (c === ZWNJ) { prevConnects = false; continue; }
-    if (HARAKAT.has(c)) { tokens.push('ـ' + c); continue; }
+    if (HARAKAT.has(c)) { push('ـ' + c, i, i + 1); continue; }
     if (!started) {
       started = true;
-      if (c === 'ا' && HARAKAT.has(chars[i + 1]) && chars[i + 1] !== 'ّ') { tokens.push('ا' + chars[i + 1]); i++; prevConnects = false; continue; }
-      if (c === 'ا' && chars[i + 1] === 'و') { tokens.push('او'); i++; prevConnects = false; continue; }
-      if (c === 'ا' && chars[i + 1] === 'ی') { const n = nextLetterExists(i + 2); tokens.push(n ? 'ایـ' : 'ای'); i++; prevConnects = n; continue; }
+      if (c === 'ا' && HARAKAT.has(chars[i + 1]) && chars[i + 1] !== 'ّ') { push('ا' + chars[i + 1], i, i + 2); i++; prevConnects = false; continue; }
+      if (c === 'ا' && chars[i + 1] === 'و') { push('او', i, i + 2); i++; prevConnects = false; continue; }
+      if (c === 'ا' && chars[i + 1] === 'ی') { const n = nextLetterExists(i + 2); push(n ? 'ایـ' : 'ای', i, i + 2); i++; prevConnects = n; continue; }
     }
     const next = nextLetterExists(i + 1);
-    if (NON_CONNECTORS.has(c)) { tokens.push(c); prevConnects = false; }
-    else if (FLEX.has(c)) { tokens.push(c); prevConnects = next; }
-    else if (FOUR_FORM.has(c)) { tokens.push(prevConnects ? (next ? `ـ${c}ـ` : `ـ${c}`) : (next ? `${c}ـ` : c)); prevConnects = next; }
-    else { tokens.push(next ? `${c}ـ` : c); prevConnects = next; }
+    if (NON_CONNECTORS.has(c)) { push(c, i, i + 1); prevConnects = false; }
+    else if (FLEX.has(c)) { push(c, i, i + 1); prevConnects = next; }
+    else if (FOUR_FORM.has(c)) { push(prevConnects ? (next ? `ـ${c}ـ` : `ـ${c}`) : (next ? `${c}ـ` : c), i, i + 1); prevConnects = next; }
+    else { push(next ? `${c}ـ` : c, i, i + 1); prevConnects = next; }
   }
-  return tokens;
+  return spans;
+}
+
+/** تبدیل یک واژهٔ اعراب‌دار به قطعه‌های آموزشی (برای چیدن خودکار روی تخته) */
+export function wordToTokens(word: string): string[] {
+  return wordToTokenSpans(word).map(s => s.token);
+}
+
+/** جایگاه تشدید نسبت به حروف کلمه، از راست به چپ. برای پذیرش دقیق تشدید در تخته. */
+export function tashdidProfile(value: string | PieceDef[]): string {
+  let letterIndex = -1;
+  const positions: number[] = [];
+  if (typeof value === 'string') {
+    for (const c of [...value]) {
+      if (c === 'ّ') positions.push(letterIndex);
+      else if (!HARAKAT.has(c) && c !== ZWNJ && c !== ZWJ && c !== 'ـ') letterIndex++;
+    }
+  } else {
+    for (const piece of value) {
+      if (piece.kind === 'mark') { if (piece.base === 'ّ') positions.push(letterIndex); }
+      else letterIndex++;
+    }
+  }
+  return positions.join(',');
 }
 
 const LETTER_LESSON: Record<string, number> = {
@@ -169,16 +196,17 @@ const LETTER_LESSON: Record<string, number> = {
   'َ': 3, 'ِ': 13, 'ُ': 16, 'ّ': 31,
 };
 /** واژه‌هایی که «و» در آن‌ها صدای «اُ» می‌دهد (درس ۲۶) */
-const O_WORDS = new Set(['تو', 'دو', 'خود', 'خودکار', 'خورشید', 'خوش', 'خوشحال', 'خوشبو', 'خوراک']);
+const O_WORDS = new Set(['تو', 'دو', 'خود', 'خودکار', 'خورشید', 'خوش', 'خوشحال', 'خوشبو', 'خوراک', 'نوروز', 'خوشمزه', 'میخورد', 'خوردن', 'خورد', 'دوشنبه', 'دوچرخه', 'خودرو']);
 
-/** نخستین درسی که همه نشانه‌های این واژه در آن آموزش داده شده‌اند */
-export function lessonOfWord(word: string): number {
+/** هر نشانه (شمارهٔ درس) روی کدام نویسهٔ واژه است؛ نمایه‌ها روی واژهٔ بدون ZWJ حساب می‌شوند */
+export function signMap(word: string): { index: number; sign: number }[] {
   const chars = [...word].filter(c => c !== ZWJ);
   const plain = plainWord(word);
-  let max = 1;
-  const bump = (n: number) => { if (n > max) max = n; };
+  const out: { index: number; sign: number }[] = [];
+  let i = 0;
+  const bump = (n: number) => { out.push({ index: i, sign: n }); };
   const isLetter = (c?: string) => !!c && !HARAKAT.has(c) && c !== ZWNJ;
-  for (let i = 0; i < chars.length; i++) {
+  for (i = 0; i < chars.length; i++) {
     const c = chars[i], prev = chars[i - 1], next = chars[i + 1];
     const atStart = i === 0 || prev === ZWNJ;
     if (c === ZWNJ) continue;
@@ -186,21 +214,38 @@ export function lessonOfWord(word: string): number {
     if (c === 'ا' && atStart && next === 'و') bump(7);
     if (c === 'ا' && atStart && next === 'ی') bump(11);
     if (c === 'و') {
-      if (O_WORDS.has(plain)) bump(26);
+      if (O_WORDS.has(plain) && (prev === 'خ' || prev === 'د' || prev === 'ت' || prev === 'ن')) bump(26);
       else if (prev === 'خ' && next === 'ا') bump(30);
-      else if (atStart || next === 'َ' || next === 'ِ' || next === 'ا' || prev === 'َ') bump(18);
-      else if (!(i === 1 && chars[0] === 'ا')) bump(7);
+      else if (i === 1 && chars[0] === 'ا') { /* «او» اول کلمه */ }
+      else if (atStart || next === 'َ' || next === 'ِ' || next === 'ا' || prev === 'َ' || prev === 'ا' || prev === 'آ' || prev === 'ی') bump(18);
+      else bump(7);
     }
     if (c === 'ی') {
       if (i === 1 && chars[0] === 'ا') { /* «ای» اول کلمه */ }
-      else if (atStart || next === 'َ' || next === 'ِ' || next === 'ُ' || prev === 'َ' || ((prev === 'ا' || prev === 'و') && isLetter(next))) bump(15);
+      else if (atStart || next === 'َ' || next === 'ِ' || next === 'ُ' || next === 'ا' || prev === 'َ' || ((prev === 'ا' || prev === 'آ' || prev === 'و') && isLetter(next))) bump(15);
       else bump(11);
     }
     if (c === 'ه') {
       const isFinal = !chars.slice(i + 1).some(isLetter);
-      if (isFinal && isLetter(prev) && !['ا', 'و'].includes(prev!) && i > 1) bump(13);
+      if (isFinal && prev === 'ّ' && i > 1) bump(13);
+      else if (isFinal && prev === 'و' && chars[i - 2] === 'ی') bump(13); // میوه
+      else if (isFinal && isLetter(prev) && !['ا', 'و'].includes(prev!) && i > 1) bump(13);
       else bump(27);
     }
   }
-  return max;
+  return out;
 }
+
+/** همهٔ نشانه‌هایی (شمارهٔ درس) که این واژه دارد؛ مثلاً «چَتر» ← {۳, ۹, ۲۸} */
+export function signsOfWord(word: string): Set<number> {
+  const out = new Set<number>(signMap(word).map(m => m.sign));
+  if (!out.size) out.add(1);
+  return out;
+}
+
+/** نخستین درسی که همه نشانه‌های این واژه در آن آموزش داده شده‌اند */
+export function lessonOfWord(word: string): number {
+  return Math.max(1, ...signsOfWord(word));
+}
+/** آیا این واژه نشانهٔ درسِ داده‌شده را دارد؟ */
+export const hasSign = (word: string, order: number) => signsOfWord(word).has(order);

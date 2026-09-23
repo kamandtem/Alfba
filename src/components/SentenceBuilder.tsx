@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, RotateCcw, Volume2, X } from 'lucide-react';
-import { SENTENCE_BANK } from '../data/wordBank';
+import { sentenceSuggestionsForLesson } from '../data/sentenceBank';
 import { CURRICULUM } from '../data/curriculum';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
@@ -14,7 +14,7 @@ const plain = (s: string) => s.replace(/[\u064B-\u0652]/g, '');
 /** دهکده سوم: جمله‌سازی — فقط جمله‌هایی که همهٔ نشانه‌هایشان تا درس انتخاب‌شده خوانده شده */
 export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void }> = ({ onBack, onComplete }) => {
   const [lessonOrder] = useCurrentLesson();
-  const pool = useMemo(() => SENTENCE_BANK.filter(s => s.lesson <= lessonOrder).sort((a, b) => b.lesson - a.lesson), [lessonOrder]);
+  const pool = useMemo(() => sentenceSuggestionsForLesson(lessonOrder), [lessonOrder]);
   const [index, setIndex] = useState(0);
   const [order, setOrder] = useState<number[]>([]);
   const [result, setResult] = useState<'idle' | 'good' | 'try'>('idle');
@@ -23,12 +23,15 @@ export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'wo
   const shuffled = useMemo(() => { let s = shuffle(words.map((_, i) => i)); if (words.length > 1 && s.every((v, i) => v === i)) s = s.reverse(); return s; }, [words]);
   useEffect(() => { setOrder([]); setResult('idle'); }, [sentence?.id]);
   useBackHandler(() => { onBack(); });
+  const autoTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(autoTimer.current), []);
+  const nextSentence = () => { window.clearTimeout(autoTimer.current); setIndex(i => i + 1); };
   const reset = () => { setOrder([]); setResult('idle'); };
   const check = () => {
     if (!sentence) return;
     const ok = order.map(i => words[i]).join(' ') === sentence.text;
     setResult(ok ? 'good' : 'try');
-    if (ok) { sound.playSuccess(); sound.speakPersian(`آفرین! ${plain(sentence.text)}`); onComplete('word', sentence.id); }
+    if (ok) { sound.playSuccess(); sound.speakPersian(`آفرین! ${plain(sentence.text)}`); onComplete('word', sentence.id); window.clearTimeout(autoTimer.current); autoTimer.current = window.setTimeout(nextSentence, 2400); /* خودکار ← جملهٔ بعدی */ }
     else sound.speakPersian('نزدیک بودی، دوباره امتحان کن');
   };
   return <main className="sentence-screen" dir="rtl">
@@ -43,6 +46,6 @@ export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'wo
         {result === 'good' && <div className="feedback good"><Check /> آفرین! جمله را درست ساختی.</div>}
         {result === 'try' && <div className="feedback try"><X /> هنوز درست نشده؛ تو می‌توانی، یک بار دیگر.</div>}
       </section>}
-    <footer className="sentence-footer"><span>{toFa(pool.length)} جمله متناسب با درس تو</span><button onClick={() => setIndex(i => i + 1)}>جمله بعدی</button></footer>
+    <footer className="sentence-footer"><span>{toFa(pool.length)} جمله متناسب با درس تو</span><button onClick={nextSentence}>جمله بعدی</button></footer>
   </main>;
 };
