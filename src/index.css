@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* فونت نوشتاری کتاب فارسی اول دبستان */
+@font-face{font-family:"Tahriri";src:url("/fonts/wm_Tahriri.ttf") format("truetype");font-display:block}
+
 @layer base {
   body {
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -160,3 +163,139 @@
 /* Start screen controls */
 .start-menu-glyph{display:grid;gap:7px;width:48%;height:38%;align-content:center}.start-menu-glyph i{display:block;height:5px;border-radius:999px;background:oklch(29% .1 29);box-shadow:0 2px 0 oklch(82% .12 50)}
 .settings-backdrop{position:fixed;z-index:30;inset:0;display:grid;place-items:center;padding:24px;background:oklch(24% .06 220/.48)}.settings-panel{position:relative;width:min(90vw,420px);padding:30px 20px 22px;border-radius:30px;background:oklch(98% .025 84);color:oklch(31% .06 52);box-shadow:0 22px 50px oklch(25% .07 220/.3);text-align:right;animation:settingsIn 280ms cubic-bezier(.16,1,.3,1)}.settings-close{position:absolute;top:12px;left:12px;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:oklch(91% .045 35);color:oklch(46% .13 28)}.settings-icon{display:block;width:72px;height:72px;margin:0 auto 8px;object-fit:contain;filter:drop-shadow(0 6px 4px oklch(35% .08 45/.2))}.settings-panel h2{text-align:center;margin:2px 0 6px;font-size:1.6rem}.settings-panel>p{text-align:center;margin:0 0 18px;color:oklch(50% .045 52);font-weight:700}.settings-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 13px;margin-top:9px;border:2px solid oklch(89% .035 84);border-radius:17px;background:oklch(99% .01 84);color:inherit;text-align:right}.settings-row:hover{background:oklch(94% .07 85)}.settings-row span{display:grid;gap:3px}.settings-row b{font-size:.94rem}.settings-row small{font-size:.72rem;font-weight:700;color:oklch(51% .04 52)}.settings-row i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:oklch(90% .055 25);color:oklch(48% .13 28);font-style:normal}.settings-row.enabled i{background:oklch(87% .12 139);color:oklch(37% .12 140)}.settings-row svg{width:18px}.settings-done{width:100%;margin-top:18px;padding:12px;border:0;border-radius:15px;background:oklch(67% .16 139);color:oklch(28% .07 140);font-weight:1000;box-shadow:0 4px 0 oklch(44% .12 140)}@keyframes settingsIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ================= جزیره الفبا: نسخه هماهنگ با کتاب ================= */
+.tahriri{font-family:"Tahriri",Vazirmatn,serif;font-weight:400;line-height:1.35;letter-spacing:0}
+.inline-glyph{font-size:1.5em;vertical-align:middle;padding:0 4px}
+.soft-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:0;border-radius:14px;background:oklch(93% .025 250);color:var(--ink);font-weight:900}
+.soft-btn svg{width:18px;height:18px}
+.big-done{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border:0;border-radius:18px;background:linear-gradient(180deg,oklch(78% .17 145),oklch(66% .17 145));color:#fff;font-weight:1000;font-size:1.05rem;box-shadow:0 5px 0 oklch(50% .14 145),0 10px 18px oklch(50% .14 145/.25)}
+.big-done:active{transform:translateY(3px);box-shadow:0 2px 0 oklch(50% .14 145)}
+.big-done svg{width:22px;height:22px}
+.lesson-select{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:0 auto 12px;padding:7px 12px;border-radius:15px;background:oklch(98% .02 84);width:max-content;max-width:100%;font-size:.8rem;font-weight:900;box-shadow:0 3px 10px oklch(40% .05 80/.1)}
+.lesson-select select{border:0;border-radius:10px;padding:6px 8px;background:oklch(91% .05 84);font-weight:900;font-size:.95rem}
+.lesson-select small{color:oklch(50% .06 60);font-weight:700}
+.lesson-select.compact{margin:0 0 0 auto;padding:4px 8px}
+/* بازخورد */
+.fb-toast{position:fixed;z-index:60;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:min(560px,calc(100% - 24px));padding:12px 18px;border-radius:20px;background:#fff;box-shadow:0 12px 30px oklch(30% .05 250/.25);animation:fbIn 260ms cubic-bezier(.22,1,.36,1)}
+.fb-toast p{margin:0;font-weight:900;font-size:1rem;line-height:1.7}
+.fb-toast.good{background:oklch(95% .07 145);color:oklch(35% .1 145)}
+.fb-toast.try{background:oklch(95% .05 60);color:oklch(40% .1 50)}
+.fb-toast.info{background:oklch(95% .03 240);color:oklch(38% .08 250)}
+.fb-emoji{font-size:1.8rem}
+@keyframes fbIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes shakeX{0%,100%{translate:0}20%{translate:-8px}40%{translate:8px}60%{translate:-6px}80%{translate:5px}}
+/* تمرین ۱: دست کشیدن */
+.trace-game{display:grid;gap:10px}
+.trace-model{display:flex;align-items:center;justify-content:center;gap:14px}
+.trace-model-glyph{font-size:clamp(56px,11vw,96px);color:oklch(30% .05 260);-webkit-text-stroke:1.2px oklch(30% .05 260)}
+.trace-model button{display:grid;place-items:center;width:46px;height:46px;border:0;border-radius:14px;background:oklch(88% .08 85);color:oklch(40% .08 75)}
+.trace-label{margin:0;text-align:center;font-weight:900;color:oklch(48% .06 250)}
+.trace-label em{font-style:normal;color:oklch(60% .03 250);font-size:.85em}
+.trace-canvas-wrap{position:relative;width:100%;border-radius:24px;background:repeating-linear-gradient(0deg,oklch(99% .004 250) 0 38px,oklch(95% .01 250) 38px 39px);box-shadow:inset 0 0 0 2px oklch(90% .02 250);overflow:hidden;touch-action:none}
+.trace-guide{display:block}
+.trace-ink{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+.trace-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
+/* تمرین ۲: پیدا کردن حرف */
+.hunt-target{display:flex;align-items:center;justify-content:center;gap:14px;font-weight:900;font-size:1.1rem}
+.hunt-target b{font-size:clamp(64px,12vw,104px);color:oklch(55% .2 25);line-height:1.1}
+.hunt-target button{display:grid;place-items:center;width:46px;height:46px;border:0;border-radius:14px;background:oklch(88% .08 85);color:oklch(40% .08 75)}
+.hunt-field{display:grid;grid-template-columns:repeat(6,1fr);gap:4px 2px;padding:14px 6px;margin:8px 0;border-radius:24px;background:oklch(98% .005 250)}
+@media (max-width:520px){.hunt-field{grid-template-columns:repeat(4,1fr)}}
+.hunt-glyph{display:grid;place-items:center;min-height:84px;padding:0;border:0!important;background:transparent!important;box-shadow:none!important;color:oklch(68% .01 250);font-size:clamp(54px,9vw,78px);line-height:1;transition:color 200ms}
+.hunt-glyph.found{color:oklch(62% .19 145)}
+.hunt-glyph.wrong{color:oklch(60% .22 25);animation:shakeX 420ms}
+.hunt-footer{display:flex;align-items:center;justify-content:space-between;font-weight:900;color:oklch(48% .05 250)}
+/* تمرین ۳: چی مثل چی */
+.like-prompt{text-align:center;margin:0;font-size:1.6rem;font-weight:1000}
+.like-prompt b{font-size:2.6em;color:oklch(55% .2 25);vertical-align:middle;padding-left:10px}
+.like-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+@media (max-width:520px){.like-grid{grid-template-columns:repeat(2,1fr)}}
+.like-card{position:relative;display:grid;justify-items:center;gap:2px;padding:14px 8px 8px;border:3px solid transparent;border-radius:22px;background:oklch(97% .01 250);box-shadow:0 5px 0 oklch(88% .02 250)}
+.like-card b{font-size:2.4rem;line-height:1.3}
+.like-emoji{font-size:3rem}
+.like-card.picked{border-color:oklch(70% .17 145);background:oklch(96% .05 145)}
+.like-card.wrong{border-color:oklch(65% .2 25);animation:shakeX 420ms}
+.like-card i{position:absolute;top:8px;left:8px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:oklch(66% .17 145);color:#fff}
+.like-card i svg{width:18px}
+/* تمرین ۴: فلش‌کارت */
+.flash-game{display:grid;justify-items:center;gap:16px;perspective:1200px}
+.flash-card{position:relative;width:min(360px,86vw);aspect-ratio:3/4;transform-style:preserve-3d;transition:transform 520ms cubic-bezier(.22,1,.36,1);cursor:pointer}
+.flash-card.flipped{transform:rotateY(180deg)}
+.flash-face{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;border-radius:30px;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 14px 30px oklch(35% .06 250/.18)}
+.flash-face.front{background:linear-gradient(160deg,oklch(90% .1 85),oklch(84% .13 70));color:oklch(35% .08 60)}
+.flash-face.front b{font-size:clamp(90px,24vw,140px);line-height:1.1}
+.flash-face.front span{font-size:1.8rem;font-weight:1000}
+.flash-face small{font-weight:800;opacity:.75}
+.flash-face.back{transform:rotateY(180deg);background:linear-gradient(160deg,oklch(96% .04 200),oklch(90% .07 210));color:oklch(32% .07 240)}
+.flash-emoji{font-size:clamp(90px,24vw,130px)}
+.flash-face.back b{font-size:clamp(64px,16vw,96px);line-height:1.2}
+.flash-face.back small{font-size:1.5rem}
+.flash-nav{display:flex;align-items:center;gap:16px;font-weight:900}
+/* نقشه: درس من و تقویم */
+.lesson-chip{white-space:nowrap;position:fixed;z-index:7;bottom:calc(52px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 16px;border:0;border-radius:999px;background:oklch(99% .02 85/.95);color:oklch(35% .07 55);font-weight:900;box-shadow:0 6px 16px oklch(30% .06 210/.25)}
+.lesson-chip b{font-size:2rem;line-height:1.1;color:oklch(55% .19 25)}
+.lesson-chip small{font-size:.72rem;color:oklch(50% .05 60)}
+.calendar-panel{max-height:88dvh;overflow:auto}
+.calendar-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:12px 0}
+.calendar-list button{position:relative;display:grid;justify-items:center;gap:0;padding:8px 6px;border:2px solid transparent;border-radius:16px;background:oklch(97% .01 250);color:var(--ink)}
+.calendar-list b{font-size:2rem;line-height:1.3}
+.calendar-list small{font-size:.66rem;color:oklch(52% .04 250);font-weight:700}
+.calendar-list .cal-num{position:absolute;top:4px;right:8px;font-size:.7rem;font-weight:900;color:oklch(60% .04 250)}
+.calendar-list em{position:absolute;top:-9px;left:6px;font-style:normal;font-size:.6rem;font-weight:900;padding:1px 6px;border-radius:8px;background:oklch(70% .15 300);color:#fff}
+.calendar-list .done{background:oklch(96% .04 145)}
+.calendar-list .today{border-color:oklch(80% .15 85)}
+.calendar-list .active{border-color:oklch(62% .19 25);background:oklch(96% .04 25)}
+/* دهکده دوم: کلمه‌نویسی */
+.word-village{min-height:100dvh;display:flex;flex-direction:column;background:oklch(96% .012 250);color:var(--ink)}
+.word-village .village-page-header>button:first-child,.sentence-screen .village-page-header>button:first-child{font-size:2rem;line-height:1}
+.wv-modes{display:flex;justify-content:center;gap:6px;padding:10px 10px 4px}
+.wv-modes button{flex:1;max-width:190px;padding:10px 6px;border:0;border-radius:14px;background:oklch(92% .02 250);font-weight:900;color:oklch(42% .04 250)}
+.wv-modes button.active{background:oklch(66% .16 145);color:#fff;box-shadow:0 4px 0 oklch(52% .14 145)}
+.wv-target{display:flex;align-items:center;gap:10px;margin:8px 10px 0;padding:6px 14px;border-radius:20px;background:#fff;box-shadow:0 4px 14px oklch(35% .03 250/.08)}
+.wv-target-emoji{font-size:2.6rem}
+.wv-target div{display:grid;flex:1}
+.wv-target small{font-size:.72rem;font-weight:800;color:oklch(55% .06 250)}
+.wv-target b{font-size:2.8rem;line-height:1.25;color:oklch(35% .08 260)}
+.wv-target>button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:14px;background:oklch(88% .08 85);color:oklch(40% .08 75)}
+.wv-target .wv-next{display:flex;width:auto;gap:6px;padding:0 12px;background:oklch(93% .03 250);color:var(--ink);font-weight:900;font-size:.85rem}
+.wv-next svg{width:16px}
+.wv-next.pulse{background:oklch(70% .17 145);color:#fff;animation:pulseNext 1s infinite}
+@keyframes pulseNext{50%{transform:scale(1.07)}}
+.wv-note{margin:6px 12px 0;text-align:center;font-size:.8rem;font-weight:800;color:oklch(50% .05 250)}
+.wv-board{position:relative;flex:1;min-height:420px;margin:10px;border-radius:26px;overflow:hidden;touch-action:none;background:oklch(99% .004 250);box-shadow:inset 0 0 0 2px oklch(88% .02 250)}
+.wv-park{position:absolute;inset:0 0 auto 0;background:repeating-linear-gradient(45deg,oklch(97% .015 85) 0 16px,oklch(95.5% .02 85) 16px 32px);border-bottom:3px dashed oklch(82% .05 70)}
+.wv-park span,.wv-magnet span{position:absolute;top:8px;right:12px;font-size:.72rem;font-weight:900;color:oklch(55% .06 60);background:oklch(99% .01 85/.8);padding:2px 10px;border-radius:10px}
+.wv-magnet{position:absolute;inset:auto 0 0 0;bottom:0;background:linear-gradient(180deg,oklch(35% .03 200),oklch(30% .03 205))}
+.wv-magnet span{color:oklch(88% .03 200);background:oklch(40% .03 200/.8)}
+.wv-line{position:absolute;left:14px;right:14px;height:0;border-top:3px solid oklch(85% .09 85);box-shadow:0 0 0 0 oklch(85% .12 85/.0);transition:box-shadow 160ms}
+.wv-line.hot{border-top-color:oklch(90% .15 95);box-shadow:0 0 16px 4px oklch(88% .15 95/.55)}
+.wv-band{position:absolute;left:0;right:0;pointer-events:none;background:linear-gradient(180deg,transparent,oklch(90% .1 90/.06),transparent)}
+.wv-piece{position:absolute;transform:translate(-50%,-55%);padding:6px 12px;font-size:clamp(64px,11vw,92px);line-height:1;color:oklch(45% .19 25);cursor:grab;touch-action:none;user-select:none;background:transparent;border:0}
+.wv-magnet ~ .wv-piece{}
+.wv-word{position:absolute;display:flex;align-items:center;gap:0;transform:translateY(-58%);flex-direction:row}
+.wv-word-text{font-size:clamp(64px,11vw,92px);line-height:1;color:oklch(96% .05 90);cursor:grab;touch-action:none;padding:4px 16px;white-space:nowrap}
+.wv-word.closed .wv-word-text{color:oklch(88% .15 145)}
+.wv-word.bad .wv-word-text{color:oklch(80% .12 50)}
+.wv-word.shake{animation:shakeX 420ms}
+.wv-pop{position:absolute;left:-40px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:oklch(45% .03 200);color:oklch(92% .03 200)}
+.wv-pop svg{width:16px}
+.wv-empty{position:absolute;top:30%;left:0;right:0;margin:0;text-align:center;font-weight:800;color:oklch(58% .04 60)}
+.wv-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 10px calc(12px + env(safe-area-inset-bottom))}
+.wv-box-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border:0;border-radius:18px;background:linear-gradient(180deg,oklch(72% .12 60),oklch(60% .12 55));color:#fff;font-weight:1000;box-shadow:0 5px 0 oklch(46% .1 50)}
+.drag-ghost{position:fixed;z-index:80;pointer-events:none;transform:translate(-50%,-60%) scale(1.08);font-size:clamp(64px,11vw,92px);line-height:1;color:oklch(45% .19 25);filter:drop-shadow(0 8px 6px oklch(20% .03 250/.3))}
+.letter-box-backdrop{position:fixed;inset:0;z-index:50;background:oklch(20% .03 250/.35);display:flex;align-items:flex-end}
+.letter-box{width:100%;max-height:72dvh;overflow:auto;padding:12px 12px calc(16px + env(safe-area-inset-bottom));border-radius:28px 28px 0 0;background:linear-gradient(180deg,oklch(72% .09 60),oklch(64% .09 55));box-shadow:0 -10px 30px oklch(20% .03 250/.3)}
+.letter-box header{display:flex;align-items:center;gap:10px;color:#fff;margin-bottom:8px}
+.letter-box header b{font-size:1.15rem;font-weight:1000}
+.letter-box header small{flex:1;font-size:.72rem;font-weight:700;opacity:.9}
+.letter-box header button{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:oklch(98% .02 80/.25);color:#fff}
+.box-forms{display:flex;justify-content:center;gap:clamp(18px,6vw,48px);margin:0 0 10px;padding:6px 10px;border-radius:20px;background:oklch(96% .03 85)}
+.box-form{font-size:clamp(72px,13vw,104px);line-height:1.1;color:oklch(45% .19 25);cursor:grab;touch-action:none;padding:4px 10px}
+.box-keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px 4px;padding:8px;border-radius:20px;background:oklch(94% .035 80)}
+.box-key{display:grid;place-items:center;min-height:70px;padding:0 4px;border:0!important;background:transparent!important;box-shadow:none!important;font-size:2.4rem;line-height:1.3;color:oklch(33% .05 60);white-space:nowrap;border-radius:14px}
+.box-key.active{color:oklch(52% .2 25);background:oklch(99% .02 85)!important}
+.box-key.later{opacity:.55}
+/* جمله‌سازی با فونت کتاب */
+.sentence-answer button.tahriri,.sentence-words button.tahriri{font-size:2.1rem;line-height:1.3;padding:4px 16px}
+.sentence-prompt .speak-top{margin-top:6px}

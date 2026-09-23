@@ -1,71 +1,178 @@
-import { WordItem } from '../types';
+/**
+ * تقویم محتوایی جزیره الفبا
+ * ترتیب نشانه‌ها دقیقاً مطابق سرفصل کتاب «فارسی اول دبستان» است (نه ترتیب الفبایی).
+ * بخش ۱: «آموزش نشانه‌ها ۱» (۳۱ درس) — بخش ۲: «آموزش نشانه‌ها ۲» (۹ درس).
+ * همه تمرین‌های برنامه فقط از واژه‌هایی استفاده می‌کنند که همه نشانه‌هایشان تا درسِ انتخاب‌شده آموزش داده شده باشد.
+ */
 
-export type LessonKind = 'آ ا' | 'بـ ب' | 'د د' | 'مـ م' | 'سـ س' | 'او و' | 'تـ ت' | 'ر ر' | 'نـ ن' | 'ایـ یـ ی ای' | 'کـ ک' | 'گـ گ' | 'لـ ل' | 'ه ه' | 'پـ پ' | 'جـ ج' | 'چـ چ' | 'شـ ش' | 'فـ ف' | 'ز ز' | 'ژ ژ' | 'خـ خ' | 'قـ ق' | 'غـ غ' | 'عـ ع' | 'حـ ح' | 'ط ط' | 'ظ ظ' | 'ص ص' | 'ض ض' | 'ث ث' | 'ذ ذ';
+const ZWJ = '\u200D';
+/** شکل‌های نمایشی بدون کشیده؛ با ZWJ تا خود glyph فونت تحریری نمایش داده شود */
+export const G = {
+  init: (c: string) => c + ZWJ,
+  med: (c: string) => ZWJ + c + ZWJ,
+  fin: (c: string) => ZWJ + c,
+  mark: (m: string) => 'ـ' + m,
+};
+
+export interface LikeWord { word: string; emoji: string }
 
 export interface CurriculumLesson {
   id: string;
   order: number;
-  sign: LessonKind;
-  letterIds: string[];
-  title: string;
-  introWords: string[];
-  sentenceSeeds: string[];
+  part: 1 | 2;
+  /** برچسب کتابی نشانه، مثل «سـ س» */
+  sign: string;
+  /** نام خواندنی برای تلفظ */
+  spoken: string;
+  /** شکل‌های نوشتاری نشانه برای نمایش با فونت تحریری */
+  forms: string[];
+  /** نویسه‌هایی که حضورشان در واژه یعنی این نشانه را دارد (برای ساخت گزینه‌های انحرافی) */
+  chars: string[];
+  /** واژه‌های کلیدی و تصویری درس (برای «چی مثل چی» و فلش‌کارت) */
+  likeWords: LikeWord[];
+  /** هفتهٔ آموزشی از ابتدای مهر */
+  week: number;
 }
 
-/** ترتیب نشانه‌ها از بسته اول کتاب فارسی اول دبستان، نه ترتیب الفبایی. */
-export const CURRICULUM: CurriculumLesson[] = [
-  {id:'l01',order:1,sign:'آ ا',letterIds:['alef'],title:'آ مثل آب، ا مثل اَنار',introWords:['آب','اَبر','اَنار'],sentenceSeeds:['آب آمد','آب سرد است']},
-  {id:'l02',order:2,sign:'بـ ب',letterIds:['be'],title:'ب مثل بابا و باران',introWords:['بابا','باران','باغ'],sentenceSeeds:['بابا آمد','باران آمد']},
-  {id:'l03',order:3,sign:'د د',letterIds:['dal'],title:'د مثل دست و در',introWords:['دست','در','داد'],sentenceSeeds:['بابا آب داد','دست بالا']},
-  {id:'l04',order:4,sign:'مـ م',letterIds:['mim'],title:'م مثل مادر و ماه',introWords:['مادر','ماه','مداد'],sentenceSeeds:['مادر آمد','ماه روشن است']},
-  {id:'l05',order:5,sign:'سـ س',letterIds:['sin'],title:'س مثل سیب و سارا',introWords:['سیب','سارا','سبد'],sentenceSeeds:['سارا سیب دارد','سیب سرخ است']},
-  {id:'l06',order:6,sign:'او و',letterIds:['vav'],title:'و مثل او و توپ',introWords:['او','توپ','توت'],sentenceSeeds:['او توپ دارد','توت شیرین است']},
-  {id:'l07',order:7,sign:'تـ ت',letterIds:['te'],title:'ت مثل توت و تاب',introWords:['توت','تاب','تاج'],sentenceSeeds:['توت تازه است','تاج زیبا است']},
-  {id:'l08',order:8,sign:'ر ر',letterIds:['re'],title:'ر مثل مادر و باران',introWords:['مادر','باران','پر'],sentenceSeeds:['مادر مهربان است','باران آرام است']},
-  {id:'l09',order:9,sign:'نـ ن',letterIds:['noon'],title:'ن مثل نان و نانوا',introWords:['نان','نانوا','انار'],sentenceSeeds:['نان گرم است','نانوا نان دارد']},
-  {id:'l10',order:10,sign:'ایـ یـ ی ای',letterIds:['ye'],title:'ی مثل ایران و سیب',introWords:['ایران','سیب','ماهی'],sentenceSeeds:['ایران زیبا است','ماهی در آب است']},
-  {id:'l11',order:11,sign:'کـ ک',letterIds:['kaf'],title:'ک مثل کتاب و کودک',introWords:['کتاب','کودک','کلاس'],sentenceSeeds:['کودک کتاب دارد','کلاس شاد است']},
-  {id:'l12',order:12,sign:'گـ گ',letterIds:['gaf'],title:'گ مثل گل و گربه',introWords:['گل','گربه','گلابی'],sentenceSeeds:['گل زیبا است','گربه کوچک است']},
-  {id:'l13',order:13,sign:'لـ ل',letterIds:['lam'],title:'ل مثل لاله و لیمو',introWords:['لاله','لیمو','لب'],sentenceSeeds:['لاله سرخ است','لیمو ترش است']},
-  {id:'l14',order:14,sign:'ه ه',letterIds:['he'],title:'ه مثل خانه و هلو',introWords:['خانه','هلو','همه'],sentenceSeeds:['خانه تمیز است','هلو شیرین است']},
-  {id:'l15',order:15,sign:'پـ پ',letterIds:['pe'],title:'پ مثل پروانه و پل',introWords:['پروانه','پل','پدر'],sentenceSeeds:['پروانه زیبا است','پدر آمد']},
-  {id:'l16',order:16,sign:'جـ ج',letterIds:['jim'],title:'ج مثل جوجه و جوراب',introWords:['جوجه','جوراب','جام'],sentenceSeeds:['جوجه کوچک است','جوراب نو است']},
-  {id:'l17',order:17,sign:'چـ چ',letterIds:['che'],title:'چ مثل چتر و چای',introWords:['چتر','چای','چراغ'],sentenceSeeds:['چتر باز است','چراغ روشن است']},
-  {id:'l18',order:18,sign:'شـ ش',letterIds:['shin'],title:'ش مثل شانه و شب',introWords:['شانه','شب','شیر'],sentenceSeeds:['شب آرام است','شیر سفید است']},
-  {id:'l19',order:19,sign:'فـ ف',letterIds:['fe'],title:'ف مثل فیل و فرفره',introWords:['فیل','فرفره','فانوس'],sentenceSeeds:['فیل بزرگ است','فرفره می‌چرخد']},
-  {id:'l20',order:20,sign:'ز ز',letterIds:['ze'],title:'ز مثل زنبور و زنگ',introWords:['زنبور','زنگ','زمین'],sentenceSeeds:['زنگ صدا دارد','زمین سبز است']},
-  {id:'l21',order:21,sign:'ژ ژ',letterIds:['zhe'],title:'ژ مثل مژه',introWords:['مژه','پژمان','لاژورد'],sentenceSeeds:['مژه زیبا است']},
-  {id:'l22',order:22,sign:'خـ خ',letterIds:['khe'],title:'خ مثل خانه و خورشید',introWords:['خانه','خورشید','خواب'],sentenceSeeds:['خورشید گرم است','خانه ما زیبا است']},
-  {id:'l23',order:23,sign:'قـ ق',letterIds:['ghaf'],title:'ق مثل قایق و قاشق',introWords:['قایق','قاشق','قناری'],sentenceSeeds:['قایق روی آب است','قناری آواز دارد']},
-  {id:'l24',order:24,sign:'غـ غ',letterIds:['gheyn'],title:'غ مثل غذا و غاز',introWords:['غذا','غاز','غنچه'],sentenceSeeds:['غذا آماده است','غنچه باز شد']},
-  {id:'l25',order:25,sign:'عـ ع',letterIds:['eyn'],title:'ع مثل عروسک و علی',introWords:['عروسک','علی','عینک'],sentenceSeeds:['علی کتاب دارد']},
-  {id:'l26',order:26,sign:'حـ ح',letterIds:['he_jimi'],title:'ح مثل حیاط و حوض',introWords:['حیاط','حوض','حسن'],sentenceSeeds:['حیاط تمیز است']},
-  {id:'l27',order:27,sign:'ط ط',letterIds:['ta'],title:'ط مثل طوطی و ماهی',introWords:['طوطی','طبل','طلا'],sentenceSeeds:['طوطی سبز است']},
-  {id:'l28',order:28,sign:'ظ ظ',letterIds:['za'],title:'ظ مثل ظرف و ظهر',introWords:['ظرف','ظهر','نظافت'],sentenceSeeds:['ظرف تمیز است']},
-  {id:'l29',order:29,sign:'ص ص',letterIds:['sad'],title:'ص مثل صابون و صبح',introWords:['صابون','صبح','صدا'],sentenceSeeds:['صبح روشن است']},
-  {id:'l30',order:30,sign:'ض ض',letterIds:['zad'],title:'ض مثل رضا و ورزش',introWords:['رضا','ورزش','مریض'],sentenceSeeds:['رضا ورزش می‌کند']},
-  {id:'l31',order:31,sign:'ث ث',letterIds:['se_3'],title:'ث مثل ثانیه و مثلث',introWords:['ثانیه','مثلث','کثیف'],sentenceSeeds:['مثلث سه ضلع دارد']},
-  {id:'l32',order:32,sign:'ذ ذ',letterIds:['zal'],title:'ذ مثل ذرت و لذت',introWords:['ذرت','لذت','مذرسه'],sentenceSeeds:['ذرت زرد است']}
+const L = (order: number, sign: string, spoken: string, forms: string[], chars: string[], like: string): Omit<CurriculumLesson, 'week' | 'part' | 'id'> & { order: number } => ({
+  order, sign, spoken, forms, chars,
+  likeWords: like.split(' ').filter(Boolean).map(p => { const [word, emoji] = p.split('|'); return { word, emoji: emoji || '' }; }),
+});
+
+const two = (c: string) => [G.init(c), c];
+const four = (c: string) => [G.init(c), G.med(c), G.fin(c), c];
+
+const RAW = [
+  L(1, 'آ ا', 'آ', ['آ', 'ا'], ['آ', 'ا'], 'آب|💧 آتَش|🔥 آهو|🦌 آسمان|🌌'),
+  L(2, 'بـ ب', 'بِ', two('ب'), ['ب'], 'بابا|👨 باد|🌬️ بَرگ|🍃 باران|🌧️'),
+  L(3, 'اَ ـَ', 'اَ', ['اَ', G.mark('َ')], ['َ'], 'اَبر|☁️ اَسب|🐎 اَنگور|🍇 اَرّه|🪚'),
+  L(4, 'د', 'دال', ['د'], ['د'], 'دَست|✋ دَر|🚪 دَندان|🦷 دود|💨'),
+  L(5, 'مـ م', 'میم', two('م'), ['م'], 'ماه|🌙 ماهی|🐟 مادَر|👩 موز|🍌'),
+  L(6, 'سـ س', 'سین', two('س'), ['س'], 'سیب|🍎 سَبَد|🧺 سَگ|🐕 ساعَت|⏰'),
+  L(7, 'او و', 'او', ['او', 'و'], ['و'], 'اوتوبوس|🚌 موش|🐭 توپ|⚽ گوش|👂'),
+  L(8, 'تـ ت', 'تِ', two('ت'), ['ت'], 'توت|🍓 تاج|👑 تَبَر|🪓 تِلِفُن|☎️'),
+  L(9, 'ر', 'رِ', ['ر'], ['ر'], 'مار|🐍 روباه|🦊 اَبر|☁️ دَر|🚪'),
+  L(10, 'نـ ن', 'نون', two('ن'), ['ن'], 'نان|🍞 نَردِبان|🪜 نارِنگی|🍊 ناخُن|💅'),
+  L(11, 'اِ ـِ ـه ه', 'اِ', ['اِ', G.mark('ِ'), G.fin('ه'), 'ه'], ['ِ', 'ه'], 'اِسفَنج|🧽 خانه|🏠 جوجه|🐥 پَروانه|🦋'),
+  L(12, 'شـ ش', 'شین', two('ش'), ['ش'], 'شیر|🦁 شَمع|🕯️ موش|🐭 شُتُر|🐫'),
+  L(13, 'ایـ یـ ی ای', 'ای', ['ای' + ZWJ, G.init('ی'), G.fin('ی'), 'ای'], ['ی'], 'ایران|🇮🇷 سیب|🍎 ماهی|🐟 شیر|🦁'),
+  L(14, 'ز', 'زِ', ['ز'], ['ز'], 'زَنبور|🐝 زَنگ|🔔 پیاز|🧅 میز|🪑'),
+  L(15, 'یـ ی', 'یِ', [G.init('ی'), G.fin('ی')], ['ی'], 'یَخ|🧊 یوزپَلَنگ|🐆 یویو|🪀 کَیک|🍰'),
+  L(16, 'اُ ـُ', 'اُ', ['اُ', G.mark('ُ')], ['ُ'], 'اُردَک|🦆 گُل|🌸 شُتُر|🐫 گُربه|🐈'),
+  L(17, 'کـ ک', 'کاف', two('ک'), ['ک'], 'کِتاب|📘 کَفش|👟 کَبوتَر|🕊️ موشَک|🚀'),
+  L(18, 'و', 'واو', ['و'], ['و'], 'گاو|🐄 وال|🐋 وَرزِش|🏃 دیوار|🧱'),
+  L(19, 'پـ پ', 'پِ', two('پ'), ['پ'], 'پَروانه|🦋 پا|🦶 توپ|⚽ پَرَنده|🐦'),
+  L(20, 'گـ گ', 'گاف', two('گ'), ['گ'], 'گُل|🌸 گُربه|🐈 سَگ|🐕 گاو|🐄'),
+  L(21, 'فـ ف', 'فِ', two('ف'), ['ف'], 'فیل|🐘 فانوس|🏮 بَرف|❄️ کَفش|👟'),
+  L(22, 'خـ خ', 'خِ', two('خ'), ['خ'], 'خَرگوش|🐰 خانه|🏠 خُروس|🐓 یَخ|🧊'),
+  L(23, 'قـ ق', 'قاف', two('ق'), ['ق'], 'قایِق|⛵ قاشُق|🥄 قورباغه|🐸 بُشقاب|🍽️'),
+  L(24, 'لـ ل', 'لام', two('ل'), ['ل'], 'لیمو|🍋 لاک‌پُشت|🐢 گُل|🌸 فیل|🐘'),
+  L(25, 'جـ ج', 'جیم', two('ج'), ['ج'], 'جوجه|🐥 جوراب|🧦 تاج|👑 هَویج|🥕'),
+  L(26, 'ـو (اُ)', 'واوِ اُ', ['و'], ['و'], 'خودکار|🖊️ دو|2️⃣ تو|👉 خورشید|☀️'),
+  L(27, 'هـ ـهـ ـه ه', 'هِ', four('ه'), ['ه'], 'هَواپیما|✈️ ماه|🌙 کوه|⛰️ هَویج|🥕'),
+  L(28, 'چـ چ', 'چِ', two('چ'), ['چ'], 'چَتر|☂️ چای|🍵 قیچی|✂️ چَکُش|🔨'),
+  L(29, 'ژ', 'ژِ', ['ژ'], ['ژ'], 'ژاکَت|🧥 مُژه|👁️ ژِله|🍮 دِژ|🏰'),
+  L(30, 'خوا', 'خوا', ['خوا'], ['خوا'], 'خواهَر|👧 خواب|😴 خواندَن|📖'),
+  L(31, 'ـّ', 'تَشدید', [G.mark('ّ')], ['ّ'], 'اَرّه|🪚 بَچّه|👶 سِکّه|🪙 بَرّه|🐑'),
+  L(32, 'عـ ـعـ ـع ع', 'عین', four('ع'), ['ع'], 'عَسَل|🍯 عَروسَک|🪆 شَمع|🕯️ ساعَت|⏰'),
+  L(33, 'صـ ص', 'صاد', two('ص'), ['ص'], 'صابون|🧼 صَندَلی|🪑 صَدَف|🐚 رَقص|💃'),
+  L(34, 'ذ', 'ذال', ['ذ'], ['ذ'], 'ذُرَّت|🌽 کاغَذ|📄 لَذیذ|😋'),
+  L(35, 'ثـ ث', 'ثِ', two('ث'), ['ث'], 'مُثَلَّث|🔺 ثانیه|⏱️ کَثیف|🗑️'),
+  L(36, 'حـ ح', 'حِ', two('ح'), ['ح'], 'حَلَزون|🐌 حوض|⛲ صُبح|🌅 حَمّام|🛁'),
+  L(37, 'ضـ ض', 'ضاد', two('ض'), ['ض'], 'مَریض|🤒 قاضی|⚖️ فَضا|🪐 حوض|⛲'),
+  L(38, 'ط', 'طا', ['ط'], ['ط'], 'طوطی|🦜 طَناب|🪢 قَطار|🚂 طَبل|🥁'),
+  L(39, 'غـ ـغـ ـغ غ', 'غین', four('غ'), ['غ'], 'کَلاغ|🐦‍⬛ غَذا|🍲 باغ|🌳 مُرغ|🐔'),
+  L(40, 'ظ', 'ظا', ['ظ'], ['ظ'], 'ظَرف|🥣 ظُهر|🕛 حافِظ|📜'),
 ];
 
-const EASY_SUBJECTS = ['بابا','مادر','سارا','علی','کودک','پرنده','ماهی','گربه'];
-const EASY_OBJECTS = ['آب','نان','سیب','کتاب','توپ','گل','توت','مداد'];
-const EASY_ADJ = ['خوب است','شاد است','زیبا است','تازه است','گرم است','سرد است','کوچک است','بزرگ است'];
-const MEDIUM_VERBS = ['آب دارد','کتاب می‌خواند','به خانه آمد','با مادر است','گل را دید','نان را دوست دارد','در کلاس نشست','به باغ رفت'];
-const HARD_CONTEXT = ['امروز کودک با مادر به مدرسه رفت','سارا کتاب فارسی را با شادی خواند','پرنده کوچک روی شاخه درخت نشست','بابا برای کودک یک کتاب زیبا آورد','مادر نان گرم را روی سفره گذاشت','دانش آموز با دقت جمله را خواند','خورشید صبح از پشت کوه بالا آمد','کودکان در حیاط مدرسه بازی کردند'];
+export const CURRICULUM: CurriculumLesson[] = RAW.map(r => ({
+  ...r,
+  id: `l${String(r.order).padStart(2, '0')}`,
+  part: r.order <= 31 ? 1 : 2,
+  // سه هفته اول مهر: نگاره‌ها. نشانه‌های ۱ تا پایان بهمن، نشانه‌های ۲ در اسفند.
+  week: r.order <= 31 ? 4 + Math.floor((r.order - 1) * 19 / 31) : 23 + Math.floor((r.order - 32) * 4 / 9),
+}));
 
-export const SENTENCE_DATABASE: string[] = [
-  ...CURRICULUM.flatMap(lesson => lesson.sentenceSeeds),
-  ...Array.from({length: 180}, (_,i) => `${EASY_SUBJECTS[i%EASY_SUBJECTS.length]} ${EASY_OBJECTS[(i*3)%EASY_OBJECTS.length]}`),
-  ...Array.from({length: 180}, (_,i) => `${EASY_SUBJECTS[(i*2)%EASY_SUBJECTS.length]} ${MEDIUM_VERBS[i%MEDIUM_VERBS.length]}`),
-  ...Array.from({length: 180}, (_,i) => `${EASY_OBJECTS[i%EASY_OBJECTS.length]} ${EASY_ADJ[(i*3)%EASY_ADJ.length]}`),
-  ...Array.from({length: 80}, (_,i) => HARD_CONTEXT[i%HARD_CONTEXT.length])
+export const lessonForOrder = (order: number) => CURRICULUM.find(l => l.order === order) || CURRICULUM[0];
+
+const PERSIAN_MONTHS = ['مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند', 'فروردین', 'اردیبهشت', 'خرداد'];
+/** برچسب تقریبی تقویمی هر هفته: «هفته دوم آبان» */
+export function weekLabel(week: number): string {
+  const monthIndex = Math.min(PERSIAN_MONTHS.length - 1, Math.floor((week - 1) / 4.3));
+  const weekInMonth = Math.min(4, Math.floor((week - 1) - monthIndex * 4.3) + 1);
+  const names = ['اول', 'دوم', 'سوم', 'چهارم'];
+  return `هفته ${names[Math.max(0, weekInMonth - 1)]} ${PERSIAN_MONTHS[monthIndex]}`;
+}
+
+/** یافتن اول مهر سال تحصیلی جاری */
+function schoolYearStart(today = new Date()): Date {
+  const find = (year: number) => {
+    try {
+      const fmt = new Intl.DateTimeFormat('en-US-u-ca-persian', { month: 'numeric', day: 'numeric' });
+      for (let d = 19; d <= 25; d++) {
+        const date = new Date(year, 8, d);
+        const parts = fmt.formatToParts(date);
+        const m = parts.find(p => p.type === 'month')?.value;
+        const dd = parts.find(p => p.type === 'day')?.value;
+        if (m === '7' && dd === '1') return date;
+      }
+    } catch { /* ignore */ }
+    return new Date(year, 8, 23);
+  };
+  const thisYear = find(today.getFullYear());
+  return today >= thisYear ? thisYear : find(today.getFullYear() - 1);
+}
+
+/** درسی که طبق بودجه‌بندی امروز باید در کلاس تدریس شود */
+export function lessonForToday(today = new Date()): number {
+  const start = schoolYearStart(today);
+  const week = Math.floor((today.getTime() - start.getTime()) / (7 * 86400000)) + 1;
+  let order = 1;
+  for (const l of CURRICULUM) if (l.week <= week) order = l.order;
+  return order;
+}
+export function currentSchoolWeek(today = new Date()): number {
+  const start = schoolYearStart(today);
+  return Math.floor((today.getTime() - start.getTime()) / (7 * 86400000)) + 1;
+}
+
+/** جعبهٔ حروف: دکمه‌ها به ترتیب کتاب، هر دکمه همه شکل‌های نوشتاری آن نشانه را دارد */
+export interface BoxKey { id: string; lesson: number; pieces: string[] }
+export const LETTER_BOX: BoxKey[] = [
+  { id: 'alef', lesson: 1, pieces: ['آ', 'ا'] },
+  { id: 'be', lesson: 2, pieces: ['بـ', 'ب'] },
+  { id: 'a', lesson: 3, pieces: ['اَ', 'ـَ'] },
+  { id: 'dal', lesson: 4, pieces: ['د'] },
+  { id: 'mim', lesson: 5, pieces: ['مـ', 'م'] },
+  { id: 'sin', lesson: 6, pieces: ['سـ', 'س'] },
+  { id: 'u', lesson: 7, pieces: ['او', 'و'] },
+  { id: 'te', lesson: 8, pieces: ['تـ', 'ت'] },
+  { id: 're', lesson: 9, pieces: ['ر'] },
+  { id: 'noon', lesson: 10, pieces: ['نـ', 'ن'] },
+  { id: 'e', lesson: 11, pieces: ['اِ', 'ـِ'] },
+  { id: 'shin', lesson: 12, pieces: ['شـ', 'ش'] },
+  { id: 'ye', lesson: 13, pieces: ['ایـ', 'یـ', 'ی', 'ای'] },
+  { id: 'ze', lesson: 14, pieces: ['ز'] },
+  { id: 'o', lesson: 16, pieces: ['اُ', 'ـُ'] },
+  { id: 'kaf', lesson: 17, pieces: ['کـ', 'ک'] },
+  { id: 'pe', lesson: 19, pieces: ['پـ', 'پ'] },
+  { id: 'gaf', lesson: 20, pieces: ['گـ', 'گ'] },
+  { id: 'fe', lesson: 21, pieces: ['فـ', 'ف'] },
+  { id: 'khe', lesson: 22, pieces: ['خـ', 'خ'] },
+  { id: 'ghaf', lesson: 23, pieces: ['قـ', 'ق'] },
+  { id: 'lam', lesson: 24, pieces: ['لـ', 'ل'] },
+  { id: 'jim', lesson: 25, pieces: ['جـ', 'ج'] },
+  { id: 'he', lesson: 27, pieces: ['هـ', 'ـهـ', 'ـه', 'ه'] },
+  { id: 'che', lesson: 28, pieces: ['چـ', 'چ'] },
+  { id: 'zhe', lesson: 29, pieces: ['ژ'] },
+  { id: 'tashdid', lesson: 31, pieces: ['ـّ'] },
+  { id: 'eyn', lesson: 32, pieces: ['عـ', 'ـعـ', 'ـع', 'ع'] },
+  { id: 'sad', lesson: 33, pieces: ['صـ', 'ص'] },
+  { id: 'zal', lesson: 34, pieces: ['ذ'] },
+  { id: 'se', lesson: 35, pieces: ['ثـ', 'ث'] },
+  { id: 'he2', lesson: 36, pieces: ['حـ', 'ح'] },
+  { id: 'zad', lesson: 37, pieces: ['ضـ', 'ض'] },
+  { id: 'ta', lesson: 38, pieces: ['ط'] },
+  { id: 'gheyn', lesson: 39, pieces: ['غـ', 'ـغـ', 'ـغ', 'غ'] },
+  { id: 'za', lesson: 40, pieces: ['ظ'] },
 ];
-
-export const SENTENCES_BY_LEVEL = {
-  easy: SENTENCE_DATABASE.filter((s,i) => s.split(' ').length <= 3 && i < 220),
-  medium: SENTENCE_DATABASE.filter(s => s.split(' ').length >= 3 && s.split(' ').length <= 6),
-  hard: SENTENCE_DATABASE.filter(s => s.split(' ').length >= 5)
-};
-
-export const lessonForOrder = (order:number) => CURRICULUM.find(lesson => lesson.order === order) || CURRICULUM[0];

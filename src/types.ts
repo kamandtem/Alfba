@@ -85,7 +85,8 @@ export type ActiveScreen =
   | 'subject_select'
   | 'village_map'
   | 'recognition_village'
-  | 'sentence_builder';
+  | 'sentence_builder'
+  | 'word_village';
 
 export interface UserProgress {
   activitiesDoneToday: number;

@@ -1,19 +1,44 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowRight, Check, GripVertical, RotateCcw, Volume2, X } from 'lucide-react';
-import { SENTENCES_BY_LEVEL } from '../data/curriculum';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Check, RotateCcw, Volume2, X } from 'lucide-react';
+import { SENTENCE_BANK } from '../data/wordBank';
+import { CURRICULUM } from '../data/curriculum';
 import { sound } from '../utils/audio';
+import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
+import { LessonPicker } from './shared/LessonPicker';
 
-type Level='easy'|'medium'|'hard';
-export const SentenceBuilder:React.FC<{onBack:()=>void;onComplete:(t:'word',id?:string)=>void}>=({onBack,onComplete})=>{
-  const [level,setLevel]=useState<Level>('easy'); const [index,setIndex]=useState(0); const [order,setOrder]=useState<string[]>([]); const [result,setResult]=useState<'idle'|'good'|'try'>('idle');
-  const sentences=SENTENCES_BY_LEVEL[level]; const answer=sentences[index%sentences.length] || 'آب آمد'; const words=useMemo(()=>answer.split(' '),[answer]);
-  const shuffled=useMemo(()=>[...words].sort((a,b)=>b.localeCompare(a,'fa')),[words]);
-  const counts=order.reduce<Record<string,number>>((a,w)=>({...a,[w]:(a[w]||0)+1}),{}); const available=shuffled.filter(w=>{if((counts[w]||0)>0){counts[w]-=1;return false}return true});
-  const reset=()=>{setOrder([]);setResult('idle')};
-  const choose=(w:string)=>setOrder(o=>[...o,w]);
-  const check=()=>{const ok=order.join(' ')===answer;setResult(ok?'good':'try');if(ok){sound.playSuccess();sound.speakPersian(`آفرین! ${answer}`);onComplete('word',`sentence-${level}-${index}`)}else sound.speakPersian('دوباره امتحان کن')};
-  return <main className="sentence-screen" dir="rtl"><header className="village-page-header"><button onClick={onBack}><ArrowRight/></button><div><span>دهکده جمله‌سازی</span><h1>کلمه‌ها را کنار هم بچین</h1></div><button className="speak-top" onClick={()=>sound.speakPersian(answer)}><Volume2/></button></header>
-    <div className="sentence-levels">{(['easy','medium','hard'] as Level[]).map(l=><button key={l} className={level===l?'active':''} onClick={()=>{setLevel(l);setIndex(0);reset()}}>{l==='easy'?'آسان':l==='medium'?'متوسط':'سخت'}<small>{l==='easy'?'۲ تا ۳ کلمه':l==='medium'?'۳ تا ۶ کلمه':'۵ تا ۸ کلمه'}</small></button>)}</div>
-    <section className="sentence-workspace"><div className="sentence-prompt"><span>جمله {index+1} از {sentences.length}</span><h2>جمله درست را بساز</h2><p>هر کلمه را لمس کن یا آن را بکش و در جای خودش بگذار.</p></div><div className={`sentence-answer ${result}`} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const w=e.dataTransfer.getData('word');if(w)choose(w)}}>{order.length?order.map((w,i)=><button key={`${w}-${i}`} draggable onDragStart={e=>e.dataTransfer.setData('word',w)} onClick={()=>setOrder(o=>o.filter((_,j)=>j!==i))}>{w}</button>):<span>کلمه‌ها را اینجا بچین</span>}</div><div className="sentence-words">{available.map((w,i)=><button key={`${w}-${i}`} onClick={()=>choose(w)} draggable onDragStart={e=>e.dataTransfer.setData('word',w)}><GripVertical/>{w}</button>)}</div><div className="sentence-actions"><button onClick={reset}><RotateCcw/> از اول</button><button className="check-sentence" onClick={check}>بررسی کن <Check/></button></div>{result==='good'&&<div className="feedback good"><Check/> آفرین! جمله را درست ساختی.</div>}{result==='try'&&<div className="feedback try"><X/> هنوز درست نشده، یک بار دیگر امتحان کن.</div>}</section><footer className="sentence-footer"><span>بیش از ۵۰۰ جمله سطح‌بندی‌شده</span><button onClick={()=>{setIndex(i=>i+1);reset()}}>جمله بعدی</button></footer>
+const plain = (s: string) => s.replace(/[\u064B-\u0652]/g, '');
+
+/** دهکده سوم: جمله‌سازی — فقط جمله‌هایی که همهٔ نشانه‌هایشان تا درس انتخاب‌شده خوانده شده */
+export const SentenceBuilder: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void }> = ({ onBack, onComplete }) => {
+  const [lessonOrder] = useCurrentLesson();
+  const pool = useMemo(() => SENTENCE_BANK.filter(s => s.lesson <= lessonOrder).sort((a, b) => b.lesson - a.lesson), [lessonOrder]);
+  const [index, setIndex] = useState(0);
+  const [order, setOrder] = useState<number[]>([]);
+  const [result, setResult] = useState<'idle' | 'good' | 'try'>('idle');
+  const sentence = pool.length ? pool[index % pool.length] : null;
+  const words = useMemo(() => sentence ? sentence.text.split(' ') : [], [sentence]);
+  const shuffled = useMemo(() => { let s = shuffle(words.map((_, i) => i)); if (words.length > 1 && s.every((v, i) => v === i)) s = s.reverse(); return s; }, [words]);
+  useEffect(() => { setOrder([]); setResult('idle'); }, [sentence?.id]);
+  const reset = () => { setOrder([]); setResult('idle'); };
+  const check = () => {
+    if (!sentence) return;
+    const ok = order.map(i => words[i]).join(' ') === sentence.text;
+    setResult(ok ? 'good' : 'try');
+    if (ok) { sound.playSuccess(); sound.speakPersian(`آفرین! ${plain(sentence.text)}`); onComplete('word', sentence.id); }
+    else sound.speakPersian('نزدیک بودی، دوباره امتحان کن');
+  };
+  return <main className="sentence-screen" dir="rtl">
+    <header className="village-page-header"><button onClick={onBack} aria-label="بازگشت">›</button><div><span>دهکده سوم</span><h1>جمله‌سازی</h1></div><LessonPicker compact /></header>
+    {!sentence ? <section className="sentence-workspace"><div className="sentence-prompt"><h2>هنوز زود است!</h2><p>جمله‌سازی از درس {toFa(4)} (نشانهٔ «د») شروع می‌شود. درس را از بالا عوض کن.</p></div></section> :
+      <section className="sentence-workspace">
+        <div className="sentence-prompt"><span>جمله {toFa(index % pool.length + 1)} از {toFa(pool.length)} · تا نشانهٔ «{CURRICULUM[lessonOrder - 1].sign}»</span><h2>کلمه‌ها را به ترتیب بچین</h2><p>روی کلمه‌ها به ترتیب بزن تا جمله ساخته شود.</p>
+          <button className="speak-top" onClick={() => sound.speakPersian(plain(sentence.text))} aria-label="شنیدن جمله"><Volume2 /></button></div>
+        <div className={`sentence-answer ${result}`}>{order.length ? order.map((wi, i) => <button key={`${wi}-${i}`} className="tahriri" onClick={() => { setOrder(o => o.filter((_, j) => j !== i)); setResult('idle'); }}>{words[wi]}</button>) : <span>کلمه‌ها اینجا کنار هم می‌نشینند</span>}</div>
+        <div className="sentence-words">{shuffled.filter(i => !order.includes(i)).map(i => <button key={i} className="tahriri" onClick={() => { setOrder(o => [...o, i]); sound.playPop(); }}>{words[i]}</button>)}</div>
+        <div className="sentence-actions"><button onClick={reset}><RotateCcw /> از اول</button><button className="check-sentence" onClick={check}>تایید <Check /></button></div>
+        {result === 'good' && <div className="feedback good"><Check /> آفرین! جمله را درست ساختی.</div>}
+        {result === 'try' && <div className="feedback try"><X /> هنوز درست نشده؛ تو می‌توانی، یک بار دیگر.</div>}
+      </section>}
+    <footer className="sentence-footer"><span>{toFa(pool.length)} جمله متناسب با درس تو</span><button onClick={() => setIndex(i => i + 1)}>جمله بعدی</button></footer>
   </main>;
 };

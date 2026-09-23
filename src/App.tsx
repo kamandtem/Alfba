@@ -11,6 +11,7 @@ import { SubjectSelect } from './components/SubjectSelect';
 import { VillageMap } from './components/VillageMap';
 import { RecognitionVillage } from './components/RecognitionVillage';
 import { SentenceBuilder } from './components/SentenceBuilder';
+import { WordVillage } from './components/WordVillage';
 import { ActiveScreen, UserProgress } from './types';
 import { loadProgress, recordActivityCompleted } from './utils/progressStorage';
 import { sound } from './utils/audio';
@@ -26,8 +27,9 @@ export default function App() {
 
   if(screen==='splash') return <SplashScreen skipNativeSplash={skipNativeSplash} onStart={()=>{setSkipNativeSplash(true);navigate('village_map')}} onProgress={()=>{setSkipNativeSplash(true);navigate('village_map')}}/>;
   if(screen==='subject_select') return <SubjectSelect onSelect={s=>{setSubject(s);navigate(s==='persian'?'village_map':'math_games')}}/>;
-  if(screen==='village_map') return <VillageMap onSubject={()=>{setSkipNativeSplash(true);navigate('splash')}} onNavigate={navigate} onVillage={v=>navigate(v==='recognition'?'recognition_village':v==='word'?'magnetic_board':'sentence_builder')}/>;
+  if(screen==='village_map') return <VillageMap onSubject={()=>{setSkipNativeSplash(true);navigate('splash')}} onNavigate={navigate} onVillage={v=>navigate(v==='recognition'?'recognition_village':v==='word'?'word_village':'sentence_builder')}/>;
   if(screen==='recognition_village') return <RecognitionVillage onBack={()=>navigate('village_map')} onHome={()=>{setSkipNativeSplash(true);navigate('splash')}} onComplete={complete}/>;
+  if(screen==='word_village') return <WordVillage onBack={()=>navigate('village_map')} onComplete={complete}/>;
   if(screen==='sentence_builder') return <SentenceBuilder onBack={()=>navigate('village_map')} onComplete={complete}/>;
 
   return <div id="persian-first-grade-app-root" className="min-h-screen w-full text-slate-800 flex flex-col select-none overflow-x-hidden font-sans" dir="rtl">
