@@ -40,10 +40,9 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
   const tap = (fn: () => void) => () => { sound.playPop(); fn(); };
 
   return <main className="start-screen" dir="rtl">
-    <div className="start-art-frame">
-      <img className="start-app-art" src="/assets/app-icon.png" alt="دهکده الفبا" />
-      <span className="start-art-shine" aria-hidden="true" />
-    </div>
+    {/* همان پس‌زمینهٔ قبلی با دو کاراکتر کودک؛ این تصویر حذف یا جایگزین نشود */}
+    <img className="start-background" src="/assets/start-children.png" alt="" draggable={false} />
+    <img className="start-sign" src="/assets/start-sign.svg" alt="دهکده الفبا" draggable={false} />
 
     {/* نوار سفید موج‌دار پایین با سه دکمه، دقیقاً مثل تصویر مرجع */}
     <section className="start-dock" aria-label="منوی شروع بازی">

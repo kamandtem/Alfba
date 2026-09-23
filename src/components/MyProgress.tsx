@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { UserProgress } from '../types';
-import { CURRICULUM } from '../data/curriculum';
+import { CURRICULUM, kidDisplay } from '../data/curriculum';
 import { toFa, useCurrentLesson } from '../utils/lessonState';
 import { useBackHandler } from '../utils/backNav';
 import { sound } from '../utils/audio';
@@ -59,7 +59,7 @@ export const MyProgress: React.FC<{ progress: UserProgress; onBack: () => void }
         <p>{cheer}</p>
         <div className="mp-now">
           <span>نشانهٔ الان من</span>
-          <b className="tahriri">{CURRICULUM[reached - 1].sign}</b>
+          <b className="tahriri">{kidDisplay(CURRICULUM[reached - 1].sign)}</b>
         </div>
       </div>
     </section>
@@ -94,7 +94,7 @@ export const MyProgress: React.FC<{ progress: UserProgress; onBack: () => void }
             return <button key={l.id} ref={l.order === reached ? curRef : undefined} className={`mp-stone ${state}`}
               onClick={() => { sound.playPop(); sound.speakPersian(`نشانهٔ ${l.spoken}`); }} aria-label={`درس ${toFa(l.order)}: نشانهٔ ${l.spoken}`}>
               <span className="mp-stone-num">{toFa(l.order)}</span>
-              <b className="tahriri">{l.sign}</b>
+              <b className="tahriri">{kidDisplay(l.sign)}</b>
               {state === 'cur' && <em aria-hidden="true">🎒</em>}
               {state === 'done' && <u aria-hidden="true">⭐</u>}
             </button>;

@@ -16,15 +16,18 @@ export const G = {
 };
 
 /**
- * شکل آغازینِ کودکانه برای «هـ» و «مـ»
- * این‌ها glyph خود فونت تحریری‌اند: هـ دوچشم و مـ گردِ روی خط، دقیقاً مثل کتاب نگارش اول.
+ * شکل آغازینِ کودکانه برای «بـ نـ تـ مـ هـ»
+ * این‌ها glyph خود فونت تحریری‌اند: بـ و نـ با نقطهٔ کتابی، تـ دونقطه، مـ گردِ روی خط و هـ دوچشم؛ دقیقاً به سبک کتاب نگارش اول.
  * اگر روزی خواستید به حالت قبل برگردید، کافی است KID_INIT را خالی کنید.
  */
-export const KID_INIT: Record<string, string> = { 'ه': '\uE104', 'م': '\uE103' };
-/** شکل نمایشی یک قطعهٔ تک (مثل «م‍» یا «ه‍») با glyph کودکانهٔ کتاب؛ فقط برای نمایش، نه برای ساختن متن کلمه */
-export const kidGlyph = (g: string) => (g.length === 2 && g[1] === ZWJ && KID_INIT[g[0]]) ? KID_INIT[g[0]] : g;
+export const KID_INIT: Record<string, string> = { 'ب': '\uE101', 'ن': '\uE102', 'م': '\uE103', 'ه': '\uE104', 'ت': '\uE105' };
+const CONNECTOR = new Set([ZWJ, '\u0640']);
+/** شکل نمایشی یک قطعهٔ تک (مثل «مـ» یا «هـ») با glyph کودکانهٔ کتاب؛ فقط برای نمایش، نه برای ساختن متن کلمه */
+/** شکل میانی و آخرِ کتابیِ «ه» (صفحهٔ ۹۱ کتاب): ـهـ قلاب رو به پایین، ـه برآمدگی کوچک. فقط برای قطعه‌های تک؛ در کلمهٔ وصل‌شده همان فونت. */
+export const KID_FORMS: Record<string, string> = { [ZWJ + 'ه' + ZWJ]: '\uE106', ['\u0640' + 'ه' + '\u0640']: '\uE106', [ZWJ + 'ه']: '\uE107', ['\u0640' + 'ه']: '\uE107' };
+export const kidGlyph = (g: string) => KID_FORMS[g] ?? ((g.length === 2 && CONNECTOR.has(g[1]) && KID_INIT[g[0]]) ? KID_INIT[g[0]] : g);
 /** فقط برای نمایش: شکل آغازین این چهار نشانه را با نسخهٔ کودکانه عوض می‌کند */
-export const kidDisplay = (text: string) => text.replace(/(^|\s)([بنمه])[\u200D\u0640](?=\s|$)/g, (m, sp: string, c: string) => sp + (KID_INIT[c] || m.slice(sp.length)));
+export const kidDisplay = (text: string) => text.replace(/(^|\s)[\u200D\u0640]ه[\u200D\u0640](?=\s|$)/g, (_m, sp: string) => sp + '\uE106').replace(/(^|\s)[\u200D\u0640]ه(?=\s|$)/g, (_m, sp: string) => sp + '\uE107').replace(/(^|\s)([بنمهت])[\u200D\u0640](?=\s|$)/g, (m, sp: string, c: string) => sp + (KID_INIT[c] || m.slice(sp.length)));
 
 export interface LikeWord { word: string; emoji: string }
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eraser, Hand, Lightbulb, RotateCcw, Volume2 } from 'lucide-react';
 import { PERSIAN_LETTERS, HARAKAT_LIST } from '../data/persianAlphabet';
+import { kidGlyph } from '../data/curriculum';
 import { FIRST_GRADE_WORDS } from '../data/words';
 import { PersianLetter, PlacedMagneticPiece, WordItem } from '../types';
 import { clusterPieces, computePersianForms, findSnapCandidate, getHarakatById, getLetterById, getLetterGlyph, normalizePersian } from '../utils/persianEngine';
@@ -11,7 +12,7 @@ import { plainWord, tashdidProfile } from '../utils/pieces';
 
 interface Props { onActivityComplete: (type: 'letter'|'word', id?: string) => void }
 type Category = 'all'|'vowel'|'consonant'|'harakat';
-type TrayPayload = { type:'letter'|'harakat'|'combo'; id:string; preferredForm?:'isolated'|'initial'; harakatId?:string; customGlyph?:string };
+type TrayPayload = { type:'letter'|'harakat'|'combo'; id:string; preferredForm?:'isolated'|'initial'|'medial'|'final'; harakatId?:string; customGlyph?:string };
 
 const uid = () => `piece_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 
@@ -152,23 +153,33 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
   const letterGlyph=(piece:PlacedMagneticPiece, letter:PersianLetter)=>{
     if(piece.customGlyph) return piece.customGlyph;
     const cluster=clusters.find(c=>c.pieces.some(p=>p.id===piece.id));
-    if(!cluster)return getLetterGlyph(letter,piece.preferredForm||'isolated');
+    if(!cluster)return kidGlyph(getLetterGlyph(letter,piece.preferredForm||'isolated'));
     const letterPieces=cluster.pieces.filter(p=>p.type==='letter');
     const idx=letterPieces.findIndex(p=>p.id===piece.id);
     const defs=letterPieces.map(p=>getLetterById(p.letterId||'')).filter((v):v is PersianLetter=>Boolean(v));
-    return getLetterGlyph(letter,computePersianForms(defs)[idx]||piece.preferredForm||'isolated');
+    return kidGlyph(getLetterGlyph(letter,computePersianForms(defs)[idx]||piece.preferredForm||'isolated'));
   };
 
   const variantButtons = selectedLetter ? (
-    <div className="variant-strip" aria-label={`شکل‌های آموزشی ${selectedLetter.name}`}>
-      <strong>{selectedLetter.name}</strong>
-      <TrayButton label="غیرآخر" glyph={selectedLetter.initial} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'initial'}} add={addPayload} drag={trayDrag}/>
-      <TrayButton label="آخر" glyph={selectedLetter.isolated} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'isolated'}} add={addPayload} drag={trayDrag}/>
-      {selectedLetter.id==='alef' && <TrayButton label="آ اول و آخر" glyph="آ" color={selectedLetter.color} payload={{type:'letter',id:'alef',customGlyph:'آ'}} add={addPayload} drag={trayDrag}/>}
-      {selectedLetter.id==='alef' && HARAKAT_LIST.slice(0,3).map(h=><TrayButton key={`a-${h.id}`} label={`الف با ${h.name.split(' ')[0]}`} glyph={`ا${h.symbol}`} color={h.color} payload={{type:'combo',id:'alef',harakatId:h.id}} add={addPayload} drag={trayDrag}/>)}
-      
-      {selectedLetter.id==='alef' && HARAKAT_LIST.slice(0,3).map(h=><TrayButton key={h.id} label={`${h.name.split(' ')[0]} تنها`} glyph={h.symbol} color={h.color} payload={{type:'harakat',id:h.id}} add={addPayload} drag={trayDrag}/>)}
-      <button className="close-variants" onClick={()=>setSelectedLetter(null)}>بستن</button>
+    <div className="letter-variant-backdrop" role="presentation" onClick={() => setSelectedLetter(null)}>
+      <section className="letter-variant-dialog" role="dialog" aria-modal="true" aria-labelledby="letter-variant-title" onClick={e => e.stopPropagation()}>
+        <header>
+          <div>
+            <small>شکل نوشتاریِ</small>
+            <strong id="letter-variant-title">{selectedLetter.name}</strong>
+          </div>
+          <button className="close-variants" onClick={() => setSelectedLetter(null)} aria-label="بستن">×</button>
+        </header>
+        <p>همین حالا یک شکل را انتخاب کن تا روی تخته بیاید.</p>
+        <div className="variant-strip">
+          <TrayButton label="اول کلمه" glyph={kidGlyph(selectedLetter.initial)} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'initial'}} add={addPayload} drag={trayDrag}/>
+          {selectedLetter.id === 'he' && <TrayButton label="میانه" glyph={kidGlyph(selectedLetter.medial)} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'medial'}} add={addPayload} drag={trayDrag}/>}
+          {selectedLetter.id === 'he' && <TrayButton label="آخر کلمه" glyph={kidGlyph(selectedLetter.final)} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'final'}} add={addPayload} drag={trayDrag}/>}
+          <TrayButton label={selectedLetter.id === 'he' ? 'تنها' : 'تنها / آخر'} glyph={kidGlyph(selectedLetter.isolated)} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'isolated'}} add={addPayload} drag={trayDrag}/>
+          {selectedLetter.id==='alef' && <TrayButton label="آ اول و آخر" glyph="آ" color={selectedLetter.color} payload={{type:'letter',id:'alef',customGlyph:'آ'}} add={addPayload} drag={trayDrag}/>}
+          {selectedLetter.id==='alef' && HARAKAT_LIST.slice(0,3).map(h=><TrayButton key={`a-${h.id}`} label={`الف با ${h.name.split(' ')[0]}`} glyph={`ا${h.symbol}`} color={h.color} payload={{type:'combo',id:'alef',harakatId:h.id}} add={addPayload} drag={trayDrag}/>)}
+        </div>
+      </section>
     </div>
   ):null;
 
@@ -210,10 +221,11 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
         {([['all','همه'],['vowel','صداها'],['consonant','حروف'],['harakat','اعراب']] as [Category,string][]).map(([id,label])=><button key={id} className={category===id?'active':''} onClick={()=>{setCategory(id);setSelectedLetter(null)}}>{label}</button>)}
         <span><Lightbulb/> لمس کن یا بکش</span>
       </div>
-      {variantButtons || <div className="tray-scroll">
+      <div className="tray-scroll">
         {category==='harakat' ? HARAKAT_LIST.map(h=><TrayButton key={h.id} label={h.name.split(' ')[0]} glyph={h.symbol} color={h.color} payload={{type:'harakat',id:h.id}} add={addPayload} drag={trayDrag}/>) : filtered.map(l=><button key={l.id} className="letter-key" style={{'--key-color':l.color} as React.CSSProperties} onClick={()=>setSelectedLetter(l)}><span>{l.isolated}</span><small>{l.name}</small></button>)}
-      </div>}
+      </div>
     </footer>
+    {variantButtons}
     {guided&&<div className="challenge-next"><span>{challenge.imageEmoji} کلمهٔ {toFa(challengeIndex + 1)} را بساز</span><button onClick={()=>{window.clearTimeout(autoTimer.current);setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
   </section>;
 };

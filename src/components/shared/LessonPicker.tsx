@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { CURRICULUM, lessonForToday, weekLabel } from '../../data/curriculum';
+import { CURRICULUM, kidDisplay, lessonForToday, weekLabel } from '../../data/curriculum';
 import { toFa, useCurrentLesson } from '../../utils/lessonState';
 import { sound } from '../../utils/audio';
 import { useBackHandler } from '../../utils/backNav';
@@ -24,7 +24,7 @@ export const LessonSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ 
           className={`lesson-tile ${l.order === lesson ? 'active' : ''} ${l.order < lesson ? 'done' : ''} ${l.part === 2 ? 'part2' : ''}`}
           onClick={() => { setLesson(l.order); sound.playPop(); sound.speakPersian(`نشانهٔ ${l.spoken}`); window.setTimeout(onClose, 180); }}>
           <span className="lesson-tile-num">{toFa(l.order)}</span>
-          <b className="tahriri">{l.sign}</b>
+          <b className="tahriri">{kidDisplay(l.sign)}</b>
           <small>{weekLabel(l.week)}</small>
           {l.order === today && <em>امروز ⭐</em>}
         </button>)}
@@ -40,7 +40,7 @@ export const LessonPicker: React.FC<{ compact?: boolean }> = ({ compact }) => {
   const current = CURRICULUM[lesson - 1];
   return <>
     <button className={`lesson-pill ${compact ? 'compact' : ''}`} onClick={() => { sound.playPop(); setOpen(true); }} aria-label="انتخاب درس">
-      <span className="lesson-pill-sign tahriri">{current.sign}</span>
+      <span className="lesson-pill-sign tahriri">{kidDisplay(current.sign)}</span>
       <span className="lesson-pill-text"><b>درس {toFa(lesson)}</b>{!compact && <small>{current.part === 1 ? 'نشانه‌ها ۱' : 'نشانه‌ها ۲'} · {weekLabel(current.week)}</small>}</span>
       <ChevronDown className="lesson-pill-caret" strokeWidth={3} />
     </button>

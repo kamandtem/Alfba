@@ -8,7 +8,7 @@ import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
 import { LessonPicker } from './shared/LessonPicker';
 import { GameHeader } from './shared/GameHeader';
 import { useBackHandler } from '../utils/backNav';
-import { ScoreBar, ScoreIsland } from './shared/ScoreIsland';
+import { ScoreIsland } from './shared/ScoreIsland';
 
 /** امتیازِ «این دفعه»: با رفتن به «پیشرفت من» و برگشتن صفر نمی‌شود، فقط با خروج از دهکده */
 let sessionPoints = 0;
@@ -27,7 +27,7 @@ type Drag =
 const uid = () => Math.random().toString(36).slice(2, 9);
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D]/g, '');
 
-export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void; stars: number; onProgress?: () => void }> = ({ onBack: leave, onComplete: record, stars, onProgress }) => {
+export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void; stars: number; onProgress?: () => void }> = ({ onBack: leave, onComplete: record, stars }) => {
   const [session, setSession] = useState(sessionPoints);
   const [islandOpen, setIslandOpen] = useState(false);
   const titleRef = useRef<HTMLButtonElement>(null);
@@ -296,7 +296,6 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     <GameHeader kicker="دهکدهٔ دوم" title="کلمه‌نویسی" emoji="🧲" tone="mint" onBack={onBack} titleRef={titleRef} onTitleClick={() => { if (!islandOpen) { sound.playPop(); setIslandOpen(true); } }}>
       <LessonPicker compact />
     </GameHeader>
-    <div className="wv-hud"><ScoreBar total={stars} onPlus={() => { sound.playPop(); onProgress?.(); }} /></div>
     <nav className="wv-modes">
       <button className={mode === 'lesson' ? 'active' : ''} onClick={() => { setMode('lesson'); sound.playPop(); }}>کلمه‌های درس</button>
       <button className={mode === 'suggest' || mode === 'dictation' ? 'active' : ''} onClick={() => { setDictChooser(true); sound.playPop(); }}>دیکته</button>
@@ -311,22 +310,19 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     </div>}
 
     {target && <section className="wv-target">
+      <span className="wv-target-num">کلمهٔ {toFa(targetNumber)}</span>
       <span className="wv-target-emoji">{target.emoji || '📝'}</span>
       <div>
-        <small>{mode === 'lesson'
-          ? `درس ${toFa(bookLessonOf(Math.max(2, lessonOrder)))} کتاب · کلمهٔ ${toFa(targetNumber)}`
-          : mode === 'dictation'
-            ? `دیکته · کلمهٔ ناقص · کلمهٔ ${toFa(targetNumber)}`
-            : `دیکته · کلمهٔ کامل · کلمهٔ ${toFa(targetNumber)}`}</small>
         {mode === 'dictation'
-          ? <b className="wv-dict-hint">گوش کن و جای خالی را پر کن</b>
+          ? null
           : <button
               type="button"
-              className={`wv-reveal-word tahriri ${revealedTarget ? 'revealed' : ''}`}
+              className={`wv-reveal-word ${revealedTarget ? 'revealed' : ''}`}
               onClick={() => { setRevealedTarget(true); sound.speakPersian(speakable(target.word)); }}
-              aria-label={revealedTarget ? `کلمهٔ ${target.word}` : 'برای دیدن نوشته لمس کن'}
+              aria-label={revealedTarget ? `کلمهٔ ${target.word}` : 'نوشته سانسور شده؛ برای دیدن لمس کن'}
             >
-              {target.word}
+              <span className="wv-reveal-text tahriri">{target.word}</span>
+              {!revealedTarget && <span className="wv-censor" aria-hidden="true"><i>سانسور</i></span>}
             </button>}
       </div>
       <button onClick={() => sound.speakPersian(speakable(target.word))} aria-label="شنیدن"><Volume2 /></button>
@@ -342,8 +338,12 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
         {dictItem && <>
           <span className="dict-emoji">{dictItem.entry.emoji || '📝'}</span>
           {dictFilled
-            ? <div className="dict-success" role="status">آفرین! موفق شدی 🎉</div>
-            : <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''} ${dictShake ? 'shake' : ''}`} aria-label="جای خالی">؟</span>}
+            ? <div className="dict-word tahriri solved" role="status" aria-label={`آفرین! ${dictItem.entry.word}`}>{dictItem.entry.word}</div>
+            : <div className={`dict-word tahriri ${dictShake ? 'shake' : ''}`} aria-label="کلمه با یک جای خالی">
+                {dictItem.before && <span className="dict-part">{dictItem.before}</span>}
+                <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''}`} aria-label="جای خالی">..</span>
+                {dictItem.after && <span className="dict-part">{dictItem.after}</span>}
+              </div>}
           <p className="dict-help">{dictFilled ? 'آفرین! کلمهٔ بعدی می‌آید…' : 'جعبهٔ حروف را باز کن، شکلِ درست را بردار و روی نقطه‌چین رها کن'}</p>
         </>}
       </div> : <>
@@ -376,7 +376,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
 
     {boxOpen && <div className="letter-box-backdrop" onClick={() => setBoxOpen(false)}>
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
-        <header><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلی را که می‌خواهی روی تخته بکش</small><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
+        <header><img className="letter-box-chest" src="/assets/ui/letter-chest.svg" alt="" draggable={false} /><div><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلش را روی تخته بکش</small></div><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
         {boxKey && <div className="box-forms">
           {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
         </div>}

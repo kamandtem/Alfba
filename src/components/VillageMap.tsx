@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { ActiveScreen } from '../types';
 import { sound } from '../utils/audio';
-import { CURRICULUM } from '../data/curriculum';
+import { CURRICULUM, kidDisplay } from '../data/curriculum';
 import { LessonSheet } from './shared/LessonPicker';
 import { toFa, useCurrentLesson } from '../utils/lessonState';
 import { useBackHandler } from '../utils/backNav';
@@ -34,7 +34,7 @@ export const VillageMap: React.FC<MapProps> = ({onNavigate,onVillage,onSubject})
       <div className="map-title-ribbon"><small>ماجراجویی من</small><strong>جزیرهٔ الفبا</strong></div>
       <button className="map-svg-button" onClick={openHelp} aria-label="راهنمای نقشه"><img src="/assets/map-help.svg" alt="راهنما" /></button>
     </header>
-    <button className="lesson-chip" onClick={()=>{sound.playPop();setCalOpen(true)}}><span>📅 درس من</span><b className="tahriri">{cur.sign}</b><small>درس {toFa(lesson)} از {toFa(CURRICULUM.length)}</small></button>
+    <button className="lesson-chip" onClick={()=>{sound.playPop();setCalOpen(true)}}><span>📅 درس من</span><b className="tahriri">{kidDisplay(cur.sign)}</b><small>درس {toFa(lesson)} از {toFa(CURRICULUM.length)}</small></button>
     <LessonSheet open={calOpen} onClose={()=>setCalOpen(false)} />
     {helpOpen && <div className="map-help-backdrop" role="presentation" onClick={()=>setHelpOpen(false)}>
       <section className="map-help-panel" role="dialog" aria-modal="true" aria-labelledby="map-help-title" onClick={e=>e.stopPropagation()}>
