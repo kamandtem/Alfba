@@ -35,6 +35,8 @@ export function parseToken(token: string): PieceDef {
   if (['آ', 'اَ', 'اِ', 'اُ', 'او'].includes(t)) return { token: t, base: t, kind: 'start', glyph: t };
   if (t === 'ایـ') return { token: t, base: 'ای', kind: 'startCont', glyph: 'ای' + ZWJ };
   if (t === 'ای') return { token: t, base: 'ای', kind: 'startEnd', glyph: 'ای' };
+  // «خوا» در کتاب یک نشانهٔ یک‌تکه است؛ به حرف بعد نمی‌چسبد ولی کلمه بعدش ادامه دارد (خواب، خواهَر)
+  if (t === 'خوا') return { token: t, base: 'خوا', kind: 'single', glyph: 'خوا' };
   if (t === 'ا') return { token: t, base: 'ا', kind: 'single', glyph: 'ا', notFirst: true };
   if (t.length === 2 && t[0] === 'ـ' && HARAKAT.has(t[1])) return { token: t, base: t[1], kind: 'mark', glyph: t };
   const c = letterOf(t);
@@ -157,6 +159,7 @@ export function wordToTokenSpans(word: string): TokenSpan[] {
       if (c === 'ا' && chars[i + 1] === 'و') { push('او', i, i + 2); i++; prevConnects = false; continue; }
       if (c === 'ا' && chars[i + 1] === 'ی') { const n = nextLetterExists(i + 2); push(n ? 'ایـ' : 'ای', i, i + 2); i++; prevConnects = n; continue; }
     }
+    if (c === 'خ' && chars[i + 1] === 'و' && chars[i + 2] === 'ا') { push('خوا', i, i + 3); i += 2; prevConnects = false; continue; }
     const next = nextLetterExists(i + 1);
     if (NON_CONNECTORS.has(c)) { push(c, i, i + 1); prevConnects = false; }
     else if (FLEX.has(c)) { push(c, i, i + 1); prevConnects = next; }

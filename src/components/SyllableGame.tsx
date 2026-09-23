@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
-import { CurriculumLesson, bookLessonOf } from '../data/curriculum';
-import { WORD_BANK } from '../data/wordBank';
+import { CurriculumLesson, bookLessonOf, kidDisplay } from '../data/curriculum';
+import { boardLessonWords, WORD_BANK } from '../data/wordBank';
 import { lessonOfWord, plainWord } from '../utils/pieces';
-import { parseSyllables, ParsedWord, SoundCell, SOUND_ONLY_UNTIL_BOOK, SYLLABLE_WORDS } from '../utils/syllables';
+import { parseSyllables, ParsedWord, SoundCell, SOUND_ONLY_UNTIL_BOOK, SYLLABLE_EXCEPTION_WORDS, SYLLABLE_EXCLUDED_WORDS, SYLLABLE_WORDS } from '../utils/syllables';
 import { sound } from '../utils/audio';
 import { shuffle, toFa } from '../utils/lessonState';
 import { vibrate } from '../utils/native';
@@ -17,15 +17,17 @@ import { FeedbackState, FeedbackToast, praise } from './shared/Feedback';
  */
 
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D\u0640]/g, '');
-const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.emoji || '📖';
+const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.emoji
+  || [18, 26, 30].flatMap(o => boardLessonWords(o)).find(e => e.plain === plainWord(w))?.emoji || '📖';
 
 /** ۳ تا ۴ واژه برای درس انتخاب‌شده؛ فقط واژه‌هایی که همهٔ نشانه‌هایشان خوانده شده */
 export function syllableWordsFor(order: number): string[] {
   const o = Math.max(2, order);
+  if (SYLLABLE_EXCEPTION_WORDS[o]) return SYLLABLE_EXCEPTION_WORDS[o];
   const book = bookLessonOf(o);
   const out: string[] = [];
   for (let b = book; b >= 1 && out.length < 4; b--) {
-    for (const w of SYLLABLE_WORDS[b] || []) if (out.length < 4 && !out.includes(w) && lessonOfWord(w) <= o) out.push(w);
+    for (const w of SYLLABLE_WORDS[b] || []) if (out.length < 4 && !out.includes(w) && !SYLLABLE_EXCLUDED_WORDS.has(w) && lessonOfWord(w) <= o) out.push(w);
     if (b === book && out.length >= 3) break;
   }
   return out.length ? out : ['آب', 'بابا'];
@@ -337,22 +339,22 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       </div>
       <div className="combination-vowel-rail" aria-label="مصوت‌ها">
         {combinationVowels.map(group => <div key={group.id} className="combination-vowel-group">
-          <span className="combination-group-label">{group.forms.join(' ')}</span>
+          <span className="combination-group-label">{group.forms.map(kidDisplay).join(' ')}</span>
           <div className="combination-vowel-forms">
-            {group.forms.map(form => <button key={`${group.id}-${form}`} className={`combination-vowel ${selectedVowel?.group.id === group.id && selectedVowel.form === form ? 'selected' : ''}`} onClick={() => chooseVowel(group, form)}>{form}</button>)}
+            {group.forms.map(form => <button key={`${group.id}-${form}`} className={`combination-vowel ${selectedVowel?.group.id === group.id && selectedVowel.form === form ? 'selected' : ''}`} onClick={() => chooseVowel(group, form)}>{kidDisplay(form)}</button>)}
           </div>
         </div>)}
       </div>
       <div className="combination-board-body">
         <div className="combination-consonant-rail" aria-label="صامت‌ها">
           {combinationConsonants.map(c => <button key={c.id} className={`combination-consonant tahriri ${selectedConsonant?.id === c.id ? 'selected' : ''}`} onClick={() => chooseConsonant(c)}>
-            <span>{c.form}</span><small>{c.name}</small>
+            <span>{kidDisplay(c.form)}</span><small>{c.name}</small>
           </button>)}
         </div>
         <div className="combination-stage" aria-live="polite">
-          {!combination && selectedConsonant && <span className="combination-stage-consonant tahriri">{selectedConsonant.form}</span>}
-          {!combination && selectedVowel && <span className="combination-stage-vowel tahriri">{selectedVowel.form}</span>}
-          {combination && <button key={combinationNonce} className="combination-result tahriri" onClick={() => sound.speakPersian(speakable(combination))}>{combination}</button>}
+          {!combination && selectedConsonant && <span className="combination-stage-consonant tahriri">{kidDisplay(selectedConsonant.form)}</span>}
+          {!combination && selectedVowel && <span className="combination-stage-vowel tahriri">{kidDisplay(selectedVowel.form)}</span>}
+          {combination && <button key={combinationNonce} className="combination-result tahriri" onClick={() => sound.speakPersian(speakable(combination))}>{kidDisplay(combination)}</button>}
           {!combination && <span className="combination-placeholder">اینجا ترکیب ساخته می‌شود</span>}
         </div>
       </div>

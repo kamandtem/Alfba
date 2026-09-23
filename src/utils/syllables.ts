@@ -55,6 +55,8 @@ export function parseSyllables(word: string): ParsedWord {
       if (c === 'ا' && next && MARKS.has(next)) { raw.push({ text: c + next, kind: 'CV', mark: false }); i++; continue; }
       if (c === 'ا' && (next === 'و' || next === 'ی')) { raw.push({ text: c + next, kind: 'CV', mark: false }); i++; continue; }
     }
+    // «خوا» یک صداست (خا)؛ «و»ی آن خوانده نمی‌شود، پس یک خانه می‌گیرد: خوا|ب ، خوا|هَر
+    if (c === 'خ' && next === 'و' && chars[i + 2] === 'ا') { raw.push({ text: 'خوا', kind: 'CV', mark: false }); i += 2; continue; }
     const prev = raw[raw.length - 1];
     const afterVowel = !prev || prev.kind !== 'C';
     const beforeVowel = !!next && (MARKS.has(next) || next === 'ا');
@@ -134,4 +136,13 @@ export const SYLLABLE_WORDS: Record<number, string[]> = {
   21: ['مُرغابی', 'کَلاغ', 'غُنچه', 'چِراغ'],
   22: ['ظَرف', 'مَنظَره', 'حافِظ', 'ناظِم'],
 };
+/** درس‌های و، و(اُ) و خوا: فقط از واژه‌های تعیین‌شدهٔ همان درس (بی‌تشدید و قابل بخش‌کردن) */
+export const SYLLABLE_EXCEPTION_WORDS: Record<number, string[]> = {
+  18: ['سَوار', 'جَواب', 'دیوار', 'جَوان'],
+  26: ['خوراک', 'خورشید', 'نوروز', 'خوشمَزه'],
+  30: ['خواب', 'خواهَر', 'خوابید', 'خواهِش'],
+};
 export const SOUND_ONLY_UNTIL_BOOK = 3;
+
+/** در جدول بخش‌بندی، واژه‌های فشردهٔ کتابی برای لمس و جداسازی مناسب نیستند. */
+export const SYLLABLE_EXCLUDED_WORDS = new Set(['گُنجِشک', 'مَسجِد']);

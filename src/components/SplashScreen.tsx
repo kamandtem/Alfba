@@ -42,7 +42,10 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
   return <main className="start-screen" dir="rtl">
     {/* همان پس‌زمینهٔ قبلی با دو کاراکتر کودک؛ این تصویر حذف یا جایگزین نشود */}
     <img className="start-background" src="/assets/start-children.png" alt="" draggable={false} />
-    <img className="start-sign" src="/assets/start-sign.svg" alt="دهکده الفبا" draggable={false} />
+    <div className="start-brand" aria-label="دهکده الفبا">
+      <img className="start-sign" src="/assets/start-sign.svg" alt="" draggable={false} />
+      <strong>دهکده الفبا</strong>
+    </div>
 
     {/* نوار سفید موج‌دار پایین با سه دکمه، دقیقاً مثل تصویر مرجع */}
     <section className="start-dock" aria-label="منوی شروع بازی">

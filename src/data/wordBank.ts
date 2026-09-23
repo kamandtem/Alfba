@@ -81,11 +81,13 @@ const RAW = `
 ظَرف|🥣 ظُهر|🕛 حافِظ|📜 مُحافِظ|💂 لَحظه|⏳ مَنظَره|🏞️
 `;
 
+export const WORD_PLACEHOLDER = '__paper__';
+
 const parseItem = (item: string) => {
   const [word, emoji = ''] = item.split('|');
-  // هیچ واژه‌ای نباید بدون تصویر وارد بازی شود؛ واژه‌های بدون تصویر اختصاصی
-  // فعلاً با کتاب تصویری مشخص می‌شوند، نه با جای خالی یا کارت بی‌نشان.
-  return { word, emoji: emoji || '📖' };
+  // برای واژه‌هایی که تصویر مناسب ندارند از یک نماد واحد استفاده می‌کنیم،
+  // نه ایموجی کتاب که معنی واژه را اشتباه حدس می‌زند.
+  return { word, emoji: emoji || WORD_PLACEHOLDER };
 };
 /** واژه‌های کتاب اول (به ترتیب درس)، بعد بقیهٔ واژه‌ها؛ هر واژه فقط یک بار */
 const buildBank = (): WordEntry[] => {
@@ -161,6 +163,11 @@ export function boardLessonWords(order: number): WordEntry[] {
   // سه درس واژه‌محورِ و، و(اُ) و خوا فهرست صریح خودشان را دارند؛
   // واژهٔ کتابیِ همان درس نباید به‌خاطر یک نشانهٔ فرعی به درس قبلی پرت شود.
   const keepCurated = order === 18 || order === 26 || order === 30;
+  // املای دقیقِ فهرست تعیین‌شده حفظ شود (مثلاً «نو» در درس و(اُ) نباید «نَو» شود)
+  if (keepCurated) return splitItems(d.write).map(x => {
+    const e = entryOf(x.word, x.emoji);
+    return e.word === x.word && (!x.emoji || e.emoji === x.emoji) ? e : { ...e, word: x.word, emoji: x.emoji || e.emoji, tokens: wordToTokens(x.word) };
+  });
   const write = splitItems(d.write).map(x => entryOf(x.word, x.emoji)).filter(w => keepCurated || ok(w));
   const withSign = write.filter(w => hasSign(w.word, order));
   const first = byEase([...withSign, ...write.filter(w => !withSign.includes(w))]);
@@ -238,14 +245,16 @@ export function dictationBlank(entry: WordEntry, order: number): DictationItem |
  */
 export function dictationWords(order: number): DictationItem[] {
   const strict = order >= 10;
-  const ok = (w: WordEntry) => !strict || w.lesson <= order;
+  // درس‌های و، و(اُ) و خوا فقط با واژه‌های تعیین‌شدهٔ خودشان؛ هَوا/جَوان/خواهَر نباید به‌خاطر حرف فرعی حذف شوند.
+  const curatedOnly = order === 18 || order === 26 || order === 30;
+  const ok = (w: WordEntry) => curatedOnly || !strict || w.lesson <= order;
   const book = bookLessonOf(order);
   const d = BOARD_WORDS[order];
   const write = d ? splitItems(d.write).map(x => entryOf(x.word, x.emoji)) : [];
   const review = d ? splitItems(d.review).map(x => entryOf(x.word, x.emoji)) : [];
   const bookWords = WORD_BANK.filter(w => w.book === book);
   const withSign = (list: WordEntry[]) => list.filter(w => ok(w) && hasSign(w.word, order));
-  const inBook = uniq([...byEase(withSign(write)), ...byEase(withSign([...bookWords, ...review]))]);
+  const inBook = curatedOnly ? uniq(write.filter(w => hasSign(w.word, order))) : uniq([...byEase(withSign(write)), ...byEase(withSign([...bookWords, ...review]))]);
   return inBook.map(w => dictationBlank(w, order)).filter((x): x is DictationItem => !!x);
 }
 

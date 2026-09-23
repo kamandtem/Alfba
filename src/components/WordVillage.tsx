@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Eraser, Flag, RefreshCw, Undo2, Volume2 } from 'lucide-react';
-import { CURRICULUM, LETTER_BOX } from '../data/curriculum';
-import { boardLessonWords, boardSuggestWords, dictationWords, DictationItem, findWord, WordEntry } from '../data/wordBank';
+import { CURRICULUM, kidGlyph, LETTER_BOX } from '../data/curriculum';
+import { boardLessonWords, boardSuggestWords, dictationWords, DictationItem, findWord, WORD_PLACEHOLDER, WordEntry } from '../data/wordBank';
 import { finishProblem, parseToken, plainSequence, renderSequence, tashdidProfile, validateSequence } from '../utils/pieces';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
@@ -26,6 +26,12 @@ type Drag =
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D]/g, '');
+const REVEAL_PIECES = 5;
+const WordVisual: React.FC<{ value?: string }> = ({ value }) => (
+  value === WORD_PLACEHOLDER || !value
+    ? <img className="word-placeholder-icon" src="/assets/word-placeholder.svg" alt="نماد واژه" draggable={false} />
+    : <span aria-hidden="true">{value}</span>
+);
 
 export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void; stars: number; onProgress?: () => void }> = ({ onBack: leave, onComplete: record, stars }) => {
   const [session, setSession] = useState(sessionPoints);
@@ -49,7 +55,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   const [fb, setFb] = useState<FeedbackState>(null);
   const [shakeWord, setShakeWord] = useState<string | null>(null);
   const [solved, setSolved] = useState(false);
-  const [revealedTarget, setRevealedTarget] = useState(false);
+  const [revealPeels, setRevealPeels] = useState(0);
   const lastWord = useRef<string | null>(null);
   const autoTimer = useRef(0);
   const modeRef = useRef<Mode>(mode); modeRef.current = mode;
@@ -97,7 +103,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   }, [slot, parkH, size.w]);
 
   const resetBoard = useCallback((t: WordEntry | null, m: Mode) => {
-    setWords([]); setSolved(false); setRevealedTarget(false); lastWord.current = null; setDictFilled(false);
+    setWords([]); setSolved(false); lastWord.current = null; setDictFilled(false);
     if (m === 'dictation') {
       setFree([]);
       if (t) sound.speakPersian(`${speakable(t.word)}. جای خالی را پر کن`);
@@ -114,6 +120,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   }, [slot]);
 
   useEffect(() => { setTargetIdx(0); setSuggestIdx(0); setDictIdx(0); }, [lessonOrder]);
+  useEffect(() => { setRevealPeels(0); }, [mode, target?.id]);
   useEffect(() => { resetBoard(target, mode); }, [mode, target?.id, size.w > 0, mode === 'dictation' ? dictIdx : 0]); // eslint-disable-line
 
   // --- پیام‌ها
@@ -273,12 +280,23 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
 
   const next = () => { window.clearTimeout(autoTimer.current); if (modeRef.current === 'lesson') setTargetIdx(i => i + 1); else if (modeRef.current === 'dictation') setDictIdx(i => i + 1); else setSuggestIdx(i => i + 1); };
   const clearAll = () => { resetBoard(target, mode); sound.playPop(); };
+  const revealedTarget = revealPeels >= REVEAL_PIECES;
+  const revealTarget = () => {
+    if (revealedTarget) {
+      sound.speakPersian(speakable(target?.word || ''));
+      return;
+    }
+    const nextPeels = Math.min(REVEAL_PIECES, revealPeels + 1);
+    setRevealPeels(nextPeels);
+    sound.playPop();
+    if (nextPeels === REVEAL_PIECES && target) sound.speakPersian(speakable(target.word));
+  };
 
   const renderDragGhost = () => {
     if (!drag) return null;
     if (drag.kind === 'word') return null;
     if (drag.kind === 'free' && !drag.moved) return null;
-    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{parseToken(drag.token).glyph}</span>;
+    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{kidGlyph(parseToken(drag.token).glyph)}</span>;
   };
 
   const dragFreeId = drag?.kind === 'free' && drag.moved ? drag.id : null;
@@ -312,19 +330,20 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
 
     {target && <section className="wv-target">
       <span className="wv-target-num">کلمهٔ {toFa(targetNumber)}</span>
-      <span className="wv-target-emoji">{target.emoji || '📝'}</span>
+      <span className="wv-target-emoji"><WordVisual value={target.emoji} /></span>
       <div>
-        {mode === 'dictation'
-          ? null
-          : <button
-              type="button"
-              className={`wv-reveal-word ${revealedTarget ? 'revealed' : ''}`}
-              onClick={() => { setRevealedTarget(true); sound.speakPersian(speakable(target.word)); }}
-              aria-label={revealedTarget ? `کلمهٔ ${target.word}` : 'نوشته پوشانده شده؛ برای دیدن لمس کن'}
-            >
-              <span className="wv-reveal-text tahriri">{target.word}</span>
-              {!revealedTarget && <span className="wv-censor" aria-hidden="true" />}
-            </button>}
+        <button
+          type="button"
+          className={`wv-reveal-word ${revealedTarget ? 'revealed' : ''}`}
+          onClick={revealTarget}
+          aria-label={revealedTarget ? `کلمهٔ ${target.word}` : `کلمه پوشانده شده؛ ${REVEAL_PIECES - revealPeels} بار دیگر لمس کن`}
+          title={revealedTarget ? 'شنیدن کلمه' : 'هر بار یک تکه از پوشش برداشته می‌شود'}
+        >
+          <span className="wv-reveal-text tahriri">{target.word}</span>
+          {!revealedTarget && <span className="wv-censor" aria-hidden="true">
+            {Array.from({ length: REVEAL_PIECES - revealPeels }, (_, i) => <i key={i} style={{ '--peel-index': i } as React.CSSProperties} />)}
+          </span>}
+        </button>
       </div>
       <button onClick={() => sound.speakPersian(speakable(target.word))} aria-label="شنیدن"><Volume2 /></button>
       <button className={`wv-next ${solved ? 'pulse' : ''}`} onClick={next}><RefreshCw /> کلمهٔ بعدی</button>
@@ -337,12 +356,12 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     <div ref={boardRef} className={`wv-board ${drag ? 'is-dragging' : ''} ${mode === 'dictation' ? 'dict-mode' : ''}`}>
       {mode === 'dictation' ? <div className="dict-stage">
         {dictItem && <>
-          <span className="dict-emoji">{dictItem.entry.emoji || '📝'}</span>
+          <span className="dict-emoji"><WordVisual value={dictItem.entry.emoji} /></span>
           {dictFilled
             ? <div className="dict-word tahriri solved" role="status" aria-label={`آفرین! ${dictItem.entry.word}`}>{dictItem.entry.word}</div>
             : <div className={`dict-word tahriri ${dictShake ? 'shake' : ''}`} aria-label="کلمه با یک جای خالی">
                 {dictItem.before && <span className="dict-part">{dictItem.before}</span>}
-                <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''}`} aria-label="جای خالی">..</span>
+                <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''}`} aria-label="جای خالی">•••</span>
                 {dictItem.after && <span className="dict-part">{dictItem.after}</span>}
               </div>}
           <p className="dict-help">{dictFilled ? 'آفرین! کلمهٔ بعدی می‌آید…' : 'جعبهٔ حروف را باز کن، شکلِ درست را بردار و روی نقطه‌چین رها کن'}</p>
@@ -353,7 +372,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
       <div className={`wv-line ${hoverLine ? 'hot' : ''}`} style={{ top: lineY }} />
       <div className="wv-band" style={{ top: lineY - band, height: band * 2 }} />
 
-      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{parseToken(p.token).glyph}</span>)}
+      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{kidGlyph(parseToken(p.token).glyph)}</span>)}
 
       {words.map(w => {
         const defs = w.seq.map(s => parseToken(s.token));
@@ -379,7 +398,8 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
         <header><img className="letter-box-chest" src="/assets/ui/letter-chest.svg" alt="" draggable={false} /><div><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلش را روی تخته بکش</small></div><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
         {boxKey && <div className="box-forms" style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
-          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{parseToken(t).glyph}</span>)}
+          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
+          {LETTER_BOX.find(k => k.id === boxKey)!.hint && <small className="box-form-hint">{LETTER_BOX.find(k => k.id === boxKey)!.hint}</small>}
         </div>}
         <div className="box-keys">
           {LETTER_BOX.map(k => <button key={k.id} className={`box-key tahriri ${boxKey === k.id ? 'active' : ''} ${k.lesson > lessonOrder ? 'later' : 'read'} ${mode === 'dictation' ? 'dict' : ''}`} onClick={e => {
@@ -388,7 +408,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
             setBoxAnchor(parent ? ((rect.left + rect.width / 2 - parent.left) / parent.width * 100) : 50);
             setBoxKey(k.id); sound.playPop();
           }}>
-            {k.pieces.map(t => parseToken(t).glyph).join(' ')}
+            {k.label ? <span className="box-key-label">{k.label}</span> : k.pieces.map(t => kidGlyph(parseToken(t).glyph)).join(' ')}
           </button>)}
         </div>
       </section>

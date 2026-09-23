@@ -4,7 +4,7 @@ import { CURRICULUM, CurriculumLesson, LikeWord, kidDisplay } from '../data/curr
 import { boardLessonWords, WORD_BANK } from '../data/wordBank';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
-import { lessonOfWord, plainWord } from '../utils/pieces';
+import { hasSign as wordHasSign, lessonOfWord, plainWord } from '../utils/pieces';
 import { LessonPicker, LessonSheet } from './shared/LessonPicker';
 import { GameHeader } from './shared/GameHeader';
 import { MapScreen } from './shared/MapScreen';
@@ -142,7 +142,8 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     const formsText = lesson.forms.join('  ');
     list.push({ text: formsText, label: `نشانهٔ «${kidDisplay(lesson.sign)}»` });
     if (lesson.forms.length > 2) lesson.forms.forEach(f => list.push({ text: f, label: `یک شکل از «${kidDisplay(lesson.sign)}»` }));
-    WORD_BANK.filter(w => w.lesson === lesson.order).slice(0, 4).forEach(w => list.push({ text: w.word, label: `واژهٔ درس: ${w.emoji}` }));
+    const traceWords = [18, 26, 30].includes(lesson.order) ? boardLessonWords(lesson.order) : WORD_BANK.filter(w => w.lesson === lesson.order);
+    traceWords.slice(0, 4).forEach(w => list.push({ text: w.word, label: `واژهٔ درس: ${w.emoji}` }));
     return list;
   }, [lesson]);
   const [index, setIndex] = useState(0);
@@ -345,7 +346,16 @@ const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = (
 
 /* ------------------------------------------------------------------ */
 /* تمرین ۳: «آ» مثلِ ...؟ انتخاب همهٔ کلمه‌های درست */
-const hasSign = (lesson: CurriculumLesson, word: string) => lesson.chars.some(ch => word.includes(ch)) || (lesson.order === 1 && word.includes('آ'));
+/** درس‌های و (دارو)، و(اُ) (خوش) و خوا (خواب): فقط واژه‌هایی که کاربر/کتاب برای همان درس تعیین کرده. */
+const EXCEPTION_LESSONS = new Set([18, 26, 30]);
+const curatedPlains = (order: number) => new Set(boardLessonWords(order).map(w => w.plain));
+const hasSign = (lesson: CurriculumLesson, word: string) => EXCEPTION_LESSONS.has(lesson.order)
+  ? curatedPlains(lesson.order).has(plainWord(word))
+  : lesson.chars.some(ch => word.includes(ch)) || (lesson.order === 1 && word.includes('آ'));
+/** گزینهٔ غلط: نه در فهرست درس، نه با همین صدای «و»/«خوا» (تا کودک گیج نشود) */
+const lacksSign = (lesson: CurriculumLesson, word: string) => EXCEPTION_LESSONS.has(lesson.order)
+  ? !hasSign(lesson, word) && !wordHasSign(word, lesson.order)
+  : !hasSign(lesson, word);
 
 /** واژه‌های تصویریِ همین نشانه و پیش‌نیازهایش، فقط از فهرست کتابی تختهٔ واژه‌ها */
 const lessonPictureWords = (order: number): LikeWord[] => {
@@ -358,7 +368,7 @@ const lessonPictureWords = (order: number): LikeWord[] => {
     out.push({ word, emoji: emoji || '📖' });
   };
   for (let n = 1; n <= order; n++) {
-    CURRICULUM[n - 1]?.likeWords.forEach(w => { if (lessonOfWord(w.word) <= order) add(w.word, w.emoji); });
+    CURRICULUM[n - 1]?.likeWords.forEach(w => { if (n === order || lessonOfWord(w.word) <= order) add(w.word, w.emoji); });
     // در سه درس واژه‌محور، فهرست «بنویس» خودِ کتاب مرجع است؛
     // واژهٔ همان درس را به‌خاطر وجود یک نشانهٔ فرعی به درس قبلی/بعدی پرت نکن.
     boardLessonWords(n).forEach(w => { if (n === order || w.lesson <= order) add(w.word, w.emoji); });
@@ -374,7 +384,7 @@ const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ 
     const correctPool = shuffle(bookWords.filter(w => hasSign(lesson, w.word)));
     const needCount = Math.min(correctPool.length, 2 + (round % 2)); // هر دور فقط ۲ یا ۳ واژهٔ درست
     const correct = correctPool.slice(0, needCount);
-    const wrong = shuffle(bookWords.filter(w => !hasSign(lesson, w.word))).slice(0, Math.max(0, 8 - correct.length));
+    const wrong = shuffle(bookWords.filter(w => lacksSign(lesson, w.word))).slice(0, Math.max(0, 8 - correct.length));
     return shuffle([...correct.map(w => ({ ...w, ok: true })), ...wrong.map(w => ({ ...w, ok: false }))]);
   }, [lesson, bookWords, round]);
   const [picked, setPicked] = useState<string[]>([]);

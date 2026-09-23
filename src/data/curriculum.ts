@@ -25,9 +25,16 @@ const CONNECTOR = new Set([ZWJ, '\u0640']);
 /** شکل نمایشی یک قطعهٔ تک (مثل «مـ» یا «هـ») با glyph کودکانهٔ کتاب؛ فقط برای نمایش، نه برای ساختن متن کلمه */
 /** شکل میانی و آخرِ کتابیِ «ه» (صفحهٔ ۹۱ کتاب): ـهـ قلاب رو به پایین، ـه برآمدگی کوچک. فقط برای قطعه‌های تک؛ در کلمهٔ وصل‌شده همان فونت. */
 export const KID_FORMS: Record<string, string> = { [ZWJ + 'ه' + ZWJ]: '\uE106', ['\u0640' + 'ه' + '\u0640']: '\uE106', [ZWJ + 'ه']: '\uE107', ['\u0640' + 'ه']: '\uE107' };
-export const kidGlyph = (g: string) => KID_FORMS[g] ?? ((g.length === 2 && CONNECTOR.has(g[1]) && KID_INIT[g[0]]) ? KID_INIT[g[0]] : g);
-/** فقط برای نمایش: شکل آغازین این چهار نشانه را با نسخهٔ کودکانه عوض می‌کند */
-export const kidDisplay = (text: string) => text.replace(/(^|\s)[\u200D\u0640]ه[\u200D\u0640](?=\s|$)/g, (_m, sp: string) => sp + '\uE106').replace(/(^|\s)[\u200D\u0640]ه(?=\s|$)/g, (_m, sp: string) => sp + '\uE107').replace(/(^|\s)([بنمهت])[\u200D\u0640](?=\s|$)/g, (m, sp: string, c: string) => sp + (KID_INIT[c] || m.slice(sp.length)));
+/** نمایش یک قطعهٔ آموزشی با glyph خود فونت، حتی وقتی کشیده به صورت ZWJ ذخیره شده باشد. */
+export const kidGlyph = (g: string) => {
+  const normalized = g.replace(/\u0640/g, ZWJ);
+  if (KID_FORMS[normalized]) return KID_FORMS[normalized];
+  const init = normalized.match(/^([بنمهت])\u200D([\u064B-\u0652\u0670اوی]*)$/);
+  if (init && KID_INIT[init[1]]) return KID_INIT[init[1]] + init[2];
+  return g;
+};
+/** جایگزینی امن برای همهٔ نمایش‌های مستقل نشانه‌ها؛ متن واژه‌ها دست‌نخورده می‌ماند. */
+export const kidDisplay = (text: string) => text.split(/(\s+)/).map(part => /^\s+$/.test(part) ? part : kidGlyph(part)).join('');
 
 export interface LikeWord { word: string; emoji: string }
 
@@ -78,7 +85,7 @@ const RAW = [
   L(15, 'یـ ی', 'یِ', ['یـ', 'ی'], ['ی'], 'یَخ|🧊 یوزپَلَنگ|🐆 یویو|🪀 کَیک|🍰'),
   L(16, 'اُ ـُ', 'اُ', ['اُ', G.mark('ُ')], ['ُ'], 'اُردَک|🦆 گُل|🌸 شُتُر|🐫 گُربه|🐈'),
   L(17, 'کـ ک', 'کاف', two('ک'), ['ک'], 'کِتاب|📘 کَفش|👟 کَبوتَر|🕊️ موشَک|🚀'),
-  L(18, 'و', 'واو', ['و'], ['و'], 'گاو|🐄 وال|🐋 وَرزِش|🏃 دیوار|🧱'),
+  L(18, 'و', 'واو', ['و'], ['و'], 'داوَر|⚖️ گاو|🐄 هَوا|🌬️ دَوا|💊 دارو|🧴 ناودان|🚰 روان|🏃 جَوان|🧒 جَواب|💬 دیوار|🧱 سَوار|🏇 نَوار|🎞️'),
   L(19, 'پـ پ', 'پِ', two('پ'), ['پ'], 'پَروانه|🦋 پا|🦶 توپ|⚽ پَرَنده|🐦'),
   L(20, 'گـ گ', 'گاف', two('گ'), ['گ'], 'گُل|🌸 گُربه|🐈 سَگ|🐕 گاو|🐄'),
   L(21, 'فـ ف', 'فِ', two('ف'), ['ف'], 'فیل|🐘 فانوس|🏮 بَرف|❄️ کَفش|👟'),
@@ -86,11 +93,11 @@ const RAW = [
   L(23, 'قـ ق', 'قاف', two('ق'), ['ق'], 'قایِق|⛵ قاشُق|🥄 قورباغه|🐸 بُشقاب|🍽️'),
   L(24, 'لـ ل', 'لام', two('ل'), ['ل'], 'لیمو|🍋 لاک‌پُشت|🐢 گُل|🌸 فیل|🐘'),
   L(25, 'جـ ج', 'جیم', two('ج'), ['ج'], 'جوجه|🐥 جوراب|🧦 تاج|👑 هَویج|🥕'),
-  L(26, 'ـو (اُ)', 'واوِ اُ', ['و'], ['و'], 'خودکار|🖊️ دو|2️⃣ تو|👉 خورشید|☀️'),
+  L(26, 'ـو (اُ)', 'واوِ اُ', ['و'], ['و'], 'خوش|😊 خود|🧍 خوشحال|😄 خوشمَزه|😋 خوراک|🍲 خودَم|🙋 خورشید|☀️ نو|🆕 نوروز|🌷'),
   L(27, 'هـ ـهـ ـه ه', 'هِ', four('ه'), ['ه'], 'هَواپیما|✈️ ماه|🌙 کوه|⛰️ هَویج|🥕'),
   L(28, 'چـ چ', 'چِ', two('چ'), ['چ'], 'چَتر|☂️ چای|🍵 قیچی|✂️ چَکُش|🔨'),
   L(29, 'ژ', 'ژِ', ['ژ'], ['ژ'], 'ژاکَت|🧥 مُژه|👁️ ژِله|🍮 دِژ|🏰'),
-  L(30, 'خوا', 'خوا', ['خوا'], ['خوا'], 'خواهَر|👧 خواب|😴 خواندَن|📖'),
+  L(30, 'خوا', 'خوا', ['خوا'], ['خوا'], 'خواب|😴 خواهَر|👧 خوابیدَن|🛌 خواهِش|🙏 خواند|📖 خوابید|🛌'),
   L(31, 'ـّ', 'تَشدید', [G.mark('ّ')], ['ّ'], 'اَرّه|🪚 بَچّه|👶 سِکّه|🪙 بَرّه|🐑'),
   L(32, 'صـ ص', 'صاد', two('ص'), ['ص'], 'صابون|🧼 صَدَف|🐚 صَندوق|🧰 صورَت|🙂'),
   L(33, 'ذ', 'ذال', ['ذ'], ['ذ'], 'اَذان|🕌 آذَر|🍂 کاغَذ|📄 ذُرَّت|🌽'),
@@ -164,7 +171,7 @@ export function currentSchoolWeek(today = new Date()): number {
 }
 
 /** جعبهٔ حروف: دکمه‌ها به ترتیب کتاب، هر دکمه همه شکل‌های نوشتاری آن نشانه را دارد */
-export interface BoxKey { id: string; lesson: number; pieces: string[] }
+export interface BoxKey { id: string; lesson: number; pieces: string[]; label?: string; hint?: string }
 export const LETTER_BOX: BoxKey[] = [
   { id: 'alef', lesson: 1, pieces: ['آ', 'ا'] },
   { id: 'be', lesson: 2, pieces: ['بـ', 'ب'] },
@@ -173,7 +180,6 @@ export const LETTER_BOX: BoxKey[] = [
   { id: 'mim', lesson: 5, pieces: ['مـ', 'م'] },
   { id: 'sin', lesson: 6, pieces: ['سـ', 'س'] },
   { id: 'u', lesson: 7, pieces: ['او', 'و'] },
-  { id: 'u_o', lesson: 26, pieces: ['و', 'اُ'] },
   { id: 'te', lesson: 8, pieces: ['تـ', 'ت'] },
   { id: 're', lesson: 9, pieces: ['ر'] },
   { id: 'noon', lesson: 10, pieces: ['نـ', 'ن'] },
@@ -183,6 +189,7 @@ export const LETTER_BOX: BoxKey[] = [
   { id: 'shin', lesson: 14, pieces: ['شـ', 'ش'] },
   { id: 'o', lesson: 16, pieces: ['اُ', 'ـُ'] },
   { id: 'kaf', lesson: 17, pieces: ['کـ', 'ک'] },
+  { id: 'vav', lesson: 18, pieces: ['و'], label: 'و', hint: 'مثل دارو، گاو، هَوا' },
   { id: 'pe', lesson: 19, pieces: ['پـ', 'پ'] },
   { id: 'gaf', lesson: 20, pieces: ['گـ', 'گ'] },
   { id: 'fe', lesson: 21, pieces: ['فـ', 'ف'] },
@@ -190,10 +197,11 @@ export const LETTER_BOX: BoxKey[] = [
   { id: 'ghaf', lesson: 23, pieces: ['قـ', 'ق'] },
   { id: 'lam', lesson: 24, pieces: ['لـ', 'ل'] },
   { id: 'jim', lesson: 25, pieces: ['جـ', 'ج'] },
+  { id: 'u_o', lesson: 26, pieces: ['و'], label: 'و(اُ)', hint: 'مثل خوش، خود، نو' },
   { id: 'he', lesson: 27, pieces: ['هـ', 'ـهـ', 'ـه', 'ه'] },
   { id: 'che', lesson: 28, pieces: ['چـ', 'چ'] },
   { id: 'zhe', lesson: 29, pieces: ['ژ'] },
-  { id: 'kha', lesson: 30, pieces: ['خوا'] },
+  { id: 'kha', lesson: 30, pieces: ['خوا'], label: 'خوا', hint: 'مثل خواب، خواهَر' },
   { id: 'tashdid', lesson: 31, pieces: ['ـّ'] },
   { id: 'sad', lesson: 32, pieces: ['صـ', 'ص'] },
   { id: 'zal', lesson: 33, pieces: ['ذ'] },

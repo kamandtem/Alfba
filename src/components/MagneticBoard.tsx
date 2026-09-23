@@ -8,11 +8,13 @@ import { sound } from '../utils/audio';
 import { toFa, useCurrentLesson } from '../utils/lessonState';
 import { boardLessonWords } from '../data/wordBank';
 import { plainWord, tashdidProfile } from '../utils/pieces';
+import { kidGlyph } from '../data/curriculum';
 
 interface Props { onActivityComplete: (type: 'letter'|'word', id?: string) => void }
 type Category = 'all'|'vowel'|'consonant'|'harakat';
 type TrayPayload = { type:'letter'|'harakat'|'combo'; id:string; preferredForm?:'isolated'|'initial'|'medial'|'final'; harakatId?:string; customGlyph?:string };
 
+const LETTER_ID: Record<string, string> = { 'آ': 'alef', 'ا': 'alef', 'ب': 'be', 'پ': 'pe', 'ت': 'te', 'ث': 'se_3', 'ج': 'jim', 'چ': 'che', 'ح': 'he_jimi', 'خ': 'khe', 'د': 'dal', 'ذ': 'zal', 'ر': 're', 'ز': 'ze', 'ژ': 'zhe', 'س': 'sin', 'ش': 'shin', 'ص': 'sad', 'ض': 'zad', 'ط': 'ta', 'ظ': 'za', 'ع': 'eyn', 'غ': 'gheyn', 'ف': 'fe', 'ق': 'ghaf', 'ک': 'kaf', 'گ': 'gaf', 'ل': 'lam', 'م': 'mim', 'ن': 'noon', 'و': 'vav', 'ه': 'he', 'ی': 'ye' };
 const uid = () => `piece_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 
 export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
@@ -41,6 +43,16 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
   const lessonWords = useMemo(() => {
     const allowed = new Set(boardLessonWords(lessonOrder).map(w => w.plain));
     const list = FIRST_GRADE_WORDS.filter(w => allowed.has(plainWord(w.word)));
+    // درس‌های و، و(اُ) و خوا: دقیقاً واژه‌های تعیین‌شده، حتی اگر در فهرست قدیمی تخته نباشند.
+    if (lessonOrder === 18 || lessonOrder === 26 || lessonOrder === 30) {
+      const known = new Set(list.map(w => plainWord(w.word)));
+      const extra = boardLessonWords(lessonOrder).filter(e => !known.has(e.plain)).map(e => {
+        const letters = [...e.plain].map(c => LETTER_ID[c]).filter(Boolean);
+        return { id: `x_${e.plain}`, word: e.word, letters, imageEmoji: e.emoji, meaning: e.word, difficulty: 2, acceptedForms: [e.plain], syllables: [e.word], hint: `${letters.length} نشانه را از راست به چپ کنار هم بگذار` } as WordItem;
+      });
+      const order = boardLessonWords(lessonOrder).map(e => e.plain);
+      return [...list, ...extra].sort((a, b) => order.indexOf(plainWord(a.word)) - order.indexOf(plainWord(b.word)));
+    }
     return list.length ? list : FIRST_GRADE_WORDS.slice(0, 1);
   }, [lessonOrder]);
   const clusters = useMemo(() => clusterPieces(pieces, lessonWords), [pieces, lessonWords]);
@@ -173,13 +185,14 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
   const drop=(e:React.DragEvent)=>{e.preventDefault();try{const payload=JSON.parse(e.dataTransfer.getData('application/x-persian-piece')) as TrayPayload;const point=pointOnBoard(e.clientX,e.clientY);if(point)addPayload(payload,point);}catch{/* ignored */}};
 
   const letterGlyph=(piece:PlacedMagneticPiece, letter:PersianLetter)=>{
-    if(piece.customGlyph) return piece.customGlyph;
+    if(piece.customGlyph) return kidGlyph(piece.customGlyph);
     const cluster=clusters.find(c=>c.pieces.some(p=>p.id===piece.id));
-    if(!cluster)return getLetterGlyph(letter,piece.preferredForm||'isolated');
+    if(!cluster)return kidGlyph(getLetterGlyph(letter,piece.preferredForm||'isolated'));
     const letterPieces=cluster.pieces.filter(p=>p.type==='letter');
     const idx=letterPieces.findIndex(p=>p.id===piece.id);
     const defs=letterPieces.map(p=>getLetterById(p.letterId||'')).filter((v):v is PersianLetter=>Boolean(v));
-    return getLetterGlyph(letter,computePersianForms(defs)[idx]||piece.preferredForm||'isolated');
+    const form=computePersianForms(defs)[idx]||piece.preferredForm||'isolated';
+    return letterPieces.length === 1 ? kidGlyph(getLetterGlyph(letter,form)) : getLetterGlyph(letter,form);
   };
 
   const variantButtons = selectedLetter ? (
@@ -241,14 +254,14 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
           const rect=e.currentTarget.getBoundingClientRect();
           setVariantAnchor(tray ? ((rect.left + rect.width / 2 - tray.left) / tray.width * 100) : 50);
           setSelectedLetter(l);
-        }}><span>{l.isolated}</span><small>{l.name}</small></button>)}
+        }}><span>{kidGlyph(l.isolated)}</span><small>{l.name}</small></button>)}
       </div>}
     </footer>
-    {trayPointer?.moved&&<span className="tray-drag-ghost" style={{left:trayPointer.x,top:trayPointer.y}}>{trayPointer.payload.type==='harakat'?getHarakatById(trayPointer.payload.id)?.symbol:getLetterById(trayPointer.payload.id)?.isolated}</span>}
+    {trayPointer?.moved&&<span className="tray-drag-ghost" style={{left:trayPointer.x,top:trayPointer.y}}>{trayPointer.payload.type==='harakat'?kidGlyph(getHarakatById(trayPointer.payload.id)?.symbol || ''):kidGlyph(getLetterById(trayPointer.payload.id)?.isolated || '')}</span>}
     {guided&&<div className="challenge-next"><span>{challenge.imageEmoji} کلمهٔ {toFa(challengeIndex + 1)} را بساز</span><button onClick={()=>{window.clearTimeout(autoTimer.current);setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
   </section>;
 };
 
 function TrayButton({label,glyph,color,payload,add,drag,touchDrag,suppressClick}:{label:string;glyph:string;color:string;payload:TrayPayload;add:(p:TrayPayload)=>void;drag:(e:React.DragEvent,p:TrayPayload)=>void;touchDrag?:(e:React.PointerEvent,p:TrayPayload)=>void;suppressClick?:React.MutableRefObject<boolean>}){
-  return <button draggable onPointerDown={e=>touchDrag?.(e,payload)} onDragStart={e=>drag(e,payload)} onClick={()=>{if(suppressClick?.current)return;add(payload)}} className="variant-key" style={{'--key-color':color} as React.CSSProperties} title={label}><span>{glyph}</span><small>{label}</small></button>;
+  return <button draggable onPointerDown={e=>touchDrag?.(e,payload)} onDragStart={e=>drag(e,payload)} onClick={()=>{if(suppressClick?.current)return;add(payload)}} className="variant-key" style={{'--key-color':color} as React.CSSProperties} title={label}><span>{kidGlyph(glyph)}</span><small>{label}</small></button>;
 }
