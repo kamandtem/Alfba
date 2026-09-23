@@ -49,7 +49,7 @@ export interface PlacedMagneticPiece {
   clusterId?: string; // Group ID if connected
   clusterOrder?: number; // Position in word cluster
   form?: 'isolated' | 'initial' | 'medial' | 'final';
-  preferredForm?: 'isolated' | 'initial';
+  preferredForm?: 'isolated' | 'initial' | 'medial' | 'final';
   customGlyph?: string;
   attachedToLetterId?: string; // For harakat attached to letter
 }

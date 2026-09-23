@@ -196,7 +196,11 @@ const LETTER_LESSON: Record<string, number> = {
   'َ': 3, 'ِ': 13, 'ُ': 16, 'ّ': 31,
 };
 /** واژه‌هایی که «و» در آن‌ها صدای «اُ» می‌دهد (درس ۲۶) */
-const O_WORDS = new Set(['تو', 'دو', 'خود', 'خودکار', 'خورشید', 'خوش', 'خوشحال', 'خوشبو', 'خوراک', 'نوروز', 'خوشمزه', 'میخورد', 'خوردن', 'خورد', 'دوشنبه', 'دوچرخه', 'خودرو']);
+const O_WORDS = new Set([
+  'تو', 'دو', 'خود', 'خودکار', 'خودم', 'خورشید', 'خوش', 'خوشحال', 'خوشبو',
+  'خوراک', 'نوروز', 'نو', 'خوشمزه', 'میخورد', 'خوردن', 'خورد', 'دوشنبه',
+  'دوچرخه', 'خودرو',
+]);
 
 /** هر نشانه (شمارهٔ درس) روی کدام نویسهٔ واژه است؛ نمایه‌ها روی واژهٔ بدون ZWJ حساب می‌شوند */
 export function signMap(word: string): { index: number; sign: number }[] {
@@ -208,16 +212,19 @@ export function signMap(word: string): { index: number; sign: number }[] {
   const isLetter = (c?: string) => !!c && !HARAKAT.has(c) && c !== ZWNJ;
   for (i = 0; i < chars.length; i++) {
     const c = chars[i], prev = chars[i - 1], next = chars[i + 1];
+    const prevBase = [...chars.slice(0, i)].reverse().find(x => isLetter(x));
+    const nextBase = chars.slice(i + 1).find(x => isLetter(x));
     const atStart = i === 0 || prev === ZWNJ;
     if (c === ZWNJ) continue;
     if (LETTER_LESSON[c] !== undefined) bump(LETTER_LESSON[c]);
     if (c === 'ا' && atStart && next === 'و') bump(7);
     if (c === 'ا' && atStart && next === 'ی') bump(11);
     if (c === 'و') {
-      if (O_WORDS.has(plain) && (prev === 'خ' || prev === 'د' || prev === 'ت' || prev === 'ن')) bump(26);
-      else if (prev === 'خ' && next === 'ا') bump(30);
+      if (O_WORDS.has(plain) && (prevBase === 'خ' || prevBase === 'د' || prevBase === 'ت' || prevBase === 'ن')) bump(26);
+      else if (prevBase === 'خ' && nextBase === 'ا') bump(30);
       else if (i === 1 && chars[0] === 'ا') { /* «او» اول کلمه */ }
       else if (atStart || next === 'َ' || next === 'ِ' || next === 'ا' || prev === 'َ' || prev === 'ا' || prev === 'آ' || prev === 'ی') bump(18);
+      else if (!next && prev && prev !== 'ا') bump(18); // مثل «دارو»: وِ پایانی صدای «او» دارد
       else bump(7);
     }
     if (c === 'ی') {

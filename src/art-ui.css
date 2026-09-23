@@ -34,7 +34,7 @@
 /* ---------- صفحهٔ شروع (مطابق تصویر مرجع) ---------- */
 .start-screen{--dock-ratio:2.7387;--dock-h:min(calc(100vw / var(--dock-ratio)),34dvh);--row-w:calc(var(--dock-h) * var(--dock-ratio));background:oklch(80% .1 225)}
 .start-screen .start-background{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:50% 72%}
-.start-screen .start-sign{position:absolute;z-index:2;top:0;left:51%;width:min(44vw,28.8dvh);max-height:none;height:auto;transform:translateX(-50%);transform-origin:50% 0;animation:signSwing 900ms 150ms var(--ease-expo) both}
+.start-screen .start-sign{position:absolute;z-index:8;top:max(0px,env(safe-area-inset-top));left:50%;width:min(44vw,28.8dvh);max-height:none;height:auto;transform:translateX(-50%);transform-origin:50% 0;animation:signSwing 900ms 150ms var(--ease-expo) both}
 @keyframes signSwing{from{opacity:0;transform:translateX(-50%) translateY(-40%) rotate(-4deg)}to{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}}
 .start-dock{position:absolute;z-index:3;left:0;right:0;bottom:0;height:var(--dock-h);pointer-events:none}
 .start-dock-wave{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
@@ -194,15 +194,15 @@
    ===================================================================== */
 .exit-scene{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:calc(var(--sat,0px) + 16px) 16px calc(var(--sab,0px) + 16px);
   background:oklch(30% .05 30/.28);-webkit-backdrop-filter:blur(9px) saturate(1.1);backdrop-filter:blur(9px) saturate(1.1);animation:menuFade 220ms var(--ease-out) both}
-.exit-panel{position:relative;width:min(88vw,70dvh,500px);aspect-ratio:233/218;animation:exitIn 460ms var(--ease-expo) both;filter:drop-shadow(0 20px 22px oklch(25% .06 30/.35))}
+.exit-panel{position:relative;width:min(92vw,76dvh,560px);aspect-ratio:233/218;animation:exitIn 460ms var(--ease-expo) both;filter:drop-shadow(0 20px 22px oklch(25% .06 30/.35))}
 .exit-panel-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
-.exit-btn{position:absolute;top:51%;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 4px 3px oklch(35% .08 30/.22));transition:transform 140ms var(--ease-out);animation:exitBtnIn 520ms var(--ease-expo) both}
+.exit-btn{position:absolute;top:58%;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 4px 3px oklch(35% .08 30/.22));transition:transform 140ms var(--ease-out);animation:exitBtnIn 520ms var(--ease-expo) both;transform:translate(-50%,-50%)}
 .exit-btn img{display:block;width:100%;height:auto;pointer-events:none}
-.exit-btn:hover{transform:translateY(-2px)}
-.exit-btn:active{transform:translateY(3px) scale(.93)}
+.exit-btn:hover{transform:translate(-50%,calc(-50% - 2px))}
+.exit-btn:active{transform:translate(-50%,calc(-50% + 3px)) scale(.93)}
 .exit-btn:focus-visible{outline:3px solid oklch(68% .17 230);outline-offset:3px;border-radius:24px}
-.exit-no{left:21%;width:27%;animation-delay:120ms}
-.exit-yes{left:53%;width:26%;animation-delay:200ms}
+.exit-no{left:34%;width:29%;animation-delay:120ms}
+.exit-yes{left:66%;width:29%;animation-delay:200ms}
 @keyframes exitIn{from{opacity:0;transform:translateY(10%) scale(.8) rotate(2deg)}to{opacity:1;transform:none}}
 @keyframes exitBtnIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 
@@ -266,10 +266,10 @@
 /* سانسور به جای محو شدن: نوشته زیر یک نوار سانسور است و بچه می‌فهمد عمداً پوشانده شده */
 .wv-reveal-word{position:relative;display:inline-grid;place-items:center;width:max-content;max-width:100%;padding:0 .35em;border:0;background:none;filter:none!important;opacity:1!important;cursor:pointer}
 .wv-reveal-word:after{content:none!important;display:none!important}
-.wv-reveal-text{display:block;font-size:2.8rem;line-height:1.25;color:oklch(35% .08 260);transition:filter 180ms ease-out}
-.wv-reveal-word:not(.revealed) .wv-reveal-text{filter:blur(5px)}
+.wv-reveal-text{display:block;font-size:2.8rem;line-height:1.25;color:oklch(35% .08 260);transition:opacity 180ms ease-out}
+.wv-reveal-word:not(.revealed) .wv-reveal-text{opacity:.72}
 .wv-censor{position:absolute;inset:14% -2px;display:grid;place-items:center;border-radius:10px;transform:rotate(-3deg);background:repeating-linear-gradient(135deg,#2b2b33 0 12px,#3d3d48 12px 24px);box-shadow:0 3px 0 #18181d,inset 0 0 0 2px #55556a;animation:censorIn 260ms var(--ease-out,ease-out) both}
-.wv-censor i{font-style:normal;padding:1px 10px;border-radius:6px;background:#ffd23f;color:#2b2b33;font-size:.85rem;font-weight:1000;letter-spacing:.02em;transform:rotate(3deg)}
+.wv-censor i{display:none}
 .wv-reveal-word.revealed .wv-reveal-text{animation:dictSnap 320ms var(--ease-out,ease-out)}
 @keyframes censorIn{from{transform:rotate(-3deg) scaleX(.2);opacity:0}to{transform:rotate(-3deg) scaleX(1);opacity:1}}
 /* دیکتهٔ ناقص: کلمه نوشته می‌شود و فقط حرف درس جای خالیِ نقطه‌چین است */

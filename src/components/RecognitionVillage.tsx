@@ -359,7 +359,9 @@ const lessonPictureWords = (order: number): LikeWord[] => {
   };
   for (let n = 1; n <= order; n++) {
     CURRICULUM[n - 1]?.likeWords.forEach(w => { if (lessonOfWord(w.word) <= order) add(w.word, w.emoji); });
-    boardLessonWords(n).forEach(w => { if (w.lesson <= order) add(w.word, w.emoji); });
+    // در سه درس واژه‌محور، فهرست «بنویس» خودِ کتاب مرجع است؛
+    // واژهٔ همان درس را به‌خاطر وجود یک نشانهٔ فرعی به درس قبلی/بعدی پرت نکن.
+    boardLessonWords(n).forEach(w => { if (n === order || w.lesson <= order) add(w.word, w.emoji); });
   }
   WORD_BANK.forEach(w => { if (w.lesson <= order) add(w.word, w.emoji); });
   return out.sort((a, b) => [...a.word].length - [...b.word].length);

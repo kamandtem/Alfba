@@ -46,32 +46,9 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
   const [userPoints, setUserPoints] = useState<TracePoint[]>([]);
   const [progressPercent, setProgressPercent] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [attemptNumber, setAttemptNumber] = useState(1);
-  const [activeStrokeIndex, setActiveStrokeIndex] = useState(0);
-  const [strokeStarted, setStrokeStarted] = useState(false);
-  const [pathHint, setPathHint] = useState('');
+  const [attempt, setAttempt] = useState(1);
+  const [startAccepted, setStartAccepted] = useState(false);
   const [guideArrowPulse, setGuideArrowPulse] = useState(0);
-
-  const resetTrace = (countAttempt: boolean) => {
-    if (countAttempt && (userPoints.length > 0 || strokeStarted)) {
-      setAttemptNumber((current) => Math.min(5, current + 1));
-    } else if (!countAttempt) {
-      setAttemptNumber(1);
-    }
-    setUserPoints([]);
-    setProgressPercent(0);
-    setIsCompleted(false);
-    setActiveStrokeIndex(0);
-    setStrokeStarted(false);
-    setPathHint('');
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-  };
 
   // Periodic subtle animation for guide point
   useEffect(() => {
@@ -83,38 +60,44 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
 
   // Reset drawing when changing item or mode
   useEffect(() => {
-    resetTrace(false);
+    handleClearCanvas();
     const nameToSpeak = traceType === 'letters' ? activeLetter.name : activeNumber.word;
     sound.speakPersian(`بنویس: ${nameToSpeak}`);
   }, [traceType, selectedLetterIndex, selectedNumberIndex, level]);
 
-  const handleClearCanvas = () => resetTrace(true);
+  const handleClearCanvas = () => {
+    setUserPoints([]);
+    setProgressPercent(0);
+    setIsCompleted(false);
+    setStartAccepted(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  };
 
   // Distance helper
   const dist = (p1: TracePoint, p2: TracePoint) => 
     Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 
-  // Attempts 1 and 2 are forgiving, then the guide gradually asks for a cleaner trace.
-  const pathTolerance = [38, 32, 21, 13, 9][Math.min(4, attemptNumber - 1)];
-  const startTolerance = attemptNumber <= 2 ? 30 : attemptNumber === 3 ? 21 : 14;
-  const strokeCompletion = attemptNumber <= 2 ? 55 : attemptNumber === 3 ? 76 : 88;
-
   // Smart Path Correction & Progress Evaluation
   const processPoint = (rawX: number, rawY: number) => {
-    if (isCompleted) return;
+    if (isCompleted) return false;
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return false;
 
     const rect = canvas.getBoundingClientRect();
     // Normalize into 0..100 coordinate space of the template
     const normX = ((rawX - rect.left) / rect.width) * 100;
     const normY = ((rawY - rect.top) / rect.height) * 100;
 
-    const activeStroke = currentStrokes[activeStrokeIndex];
-    if (!activeStroke) return;
-    const targetPoints = activeStroke.points;
-    if (targetPoints.length === 0) return;
+    // Flatten all points of current stroke
+    const targetPoints = currentStrokes.flatMap((s) => s.points);
+    if (targetPoints.length === 0) return false;
 
     // Smart smoothing: find nearest point on target stroke
     let nearestPoint: TracePoint = targetPoints[0];
@@ -128,50 +111,47 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
       }
     }
 
-    // On attempts 1 and 2 we gently project even a wandering finger onto the guide.
-    // From attempt 3 onward, only a progressively smaller channel is accepted.
-    const accepted = attemptNumber <= 2 || minD <= pathTolerance;
-    if (accepted) {
+    // دو تلاش اول عمداً آزادند، بعد مسیر هر بار جدی‌تر دنبال می‌شود.
+    const pathTolerance = [30, 30, 20, 13, 9][Math.min(4, attempt - 1)];
+    const dotTolerance = [28, 28, 20, 13, 9][Math.min(4, attempt - 1)];
+    if (!startAccepted) {
+      if (dist({ x: normX, y: normY }, startPt) > dotTolerance) return false;
+      setStartAccepted(true);
+    }
+
+    if (minD < pathTolerance) {
       // Blend 70% toward nearest correct point to smooth kid's jitter!
-      const guideWeight = attemptNumber <= 2 ? 0.78 : 0.58;
-      const smoothedX = normX * (1 - guideWeight) + nearestPoint.x * guideWeight;
-      const smoothedY = normY * (1 - guideWeight) + nearestPoint.y * guideWeight;
+      const smoothedX = normX * 0.3 + nearestPoint.x * 0.7;
+      const smoothedY = normY * 0.3 + nearestPoint.y * 0.7;
 
       const newPoint = { x: smoothedX, y: smoothedY };
       const updated = [...userPoints, newPoint];
       setUserPoints(updated);
 
-      // Count the points touched in this stroke, while keeping previous strokes complete.
+      // Estimate progress along target path
+      // Count how many target points have been touched/visited
       let touchedCount = 0;
       for (const tPt of targetPoints) {
         const hasNearUserPoint = updated.some((uPt) => dist(uPt, tPt) < 14);
         if (hasNearUserPoint) touchedCount++;
       }
 
-      const priorPoints = currentStrokes.slice(0, activeStrokeIndex).reduce((sum, stroke) => sum + stroke.points.length, 0);
-      const totalPoints = currentStrokes.reduce((sum, stroke) => sum + stroke.points.length, 0);
-      const percent = Math.min(100, Math.round(((priorPoints + touchedCount) / Math.max(1, totalPoints)) * 100));
+      const percent = Math.min(100, Math.round((touchedCount / targetPoints.length) * 100));
       setProgressPercent(percent);
-      setPathHint('');
 
-      const strokePercent = Math.round((touchedCount / targetPoints.length) * 100);
-      if (strokePercent > 0 && strokePercent % 25 === 0) {
+      // Sound pop at key checkpoints
+      if (percent > 0 && percent % 25 === 0) {
         sound.playPop();
       }
 
-      if (strokePercent >= strokeCompletion) {
-        if (activeStrokeIndex < currentStrokes.length - 1) {
-          setActiveStrokeIndex((current) => current + 1);
-          setStrokeStarted(false);
-          setIsDrawing(false);
-          sound.playPop();
-        } else if (!isCompleted) {
-          completeTrace(currentStrokes.flatMap((stroke) => stroke.points));
-        }
+      // هر تلاش بعدی واقعاً نیاز به دنبال کردن بخش بیشتری از مسیر دارد.
+      const completionThreshold = [70, 70, 78, 88, 94][Math.min(4, attempt - 1)];
+      if (percent >= completionThreshold && !isCompleted) {
+        completeTrace(targetPoints);
       }
-    } else if (attemptNumber >= 3) {
-      setPathHint(attemptNumber >= 4 ? 'این بار انگشتت را نزدیک‌تر روی خط بکش.' : 'کمی نزدیک‌تر به خط راهنما بکش.');
+      return true;
     }
+    return false;
   };
 
   const completeTrace = (targetPoints: TracePoint[]) => {
@@ -192,21 +172,7 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
   // Pointer Handlers
   const handlePointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
-    const canvas = canvasRef.current;
-    const stroke = currentStrokes[activeStrokeIndex];
-    if (!canvas || !stroke) return;
-    const rect = canvas.getBoundingClientRect();
-    const point = {
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100
-    };
-    if (!strokeStarted && dist(point, stroke.startPoint) > startTolerance) {
-      setPathHint('از نقطهٔ رنگی شروع کن.');
-      return;
-    }
-    setStrokeStarted(true);
-    setIsDrawing(true);
-    processPoint(e.clientX, e.clientY);
+    setIsDrawing(processPoint(e.clientX, e.clientY));
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -216,6 +182,10 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
 
   const handlePointerUp = () => {
     setIsDrawing(false);
+    if (!isCompleted && progressPercent < 70) {
+      setAttempt(a => Math.min(5, a + 1));
+      handleClearCanvas();
+    }
   };
 
   // Next/Prev item
@@ -236,6 +206,9 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
       setSelectedNumberIndex((p) => (p - 1 + PERSIAN_NUMBERS.length) % PERSIAN_NUMBERS.length);
     }
   };
+
+  const firstStroke = currentStrokes[0];
+  const startPt = firstStroke ? firstStroke.startPoint : { x: 50, y: 30 };
 
   return (
     <div 
@@ -358,10 +331,6 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
             <div className="w-full h-0.5 bg-blue-400" />
           </div>
         </div>
-        <div className="flex items-center justify-between gap-2 px-2 text-xs font-black" aria-live="polite">
-          <span className="text-amber-700">تلاش {toPersianDigits(attemptNumber)} از ۵، اول روی نقطه بزن</span>
-          <span className={`text-rose-600 min-h-4 ${pathHint ? 'opacity-100' : 'opacity-0'}`}>{pathHint || 'راهنما'}</span>
-        </div>
 
         {/* Carousel Navigation Arrows */}
         <button
@@ -440,14 +409,36 @@ export const TracePractice: React.FC<TracePracticeProps> = ({ onActivityComplete
               );
             })}
 
-            {/* Every stroke has its own required starting dot. */}
-            {level <= 2 && !isCompleted && currentStrokes.map((stroke, index) => (
-              <g key={`start-${stroke.id}`} transform={`translate(${stroke.startPoint.x}, ${stroke.startPoint.y})`} opacity={index === activeStrokeIndex ? 1 : 0.48}>
-                <circle r={index === activeStrokeIndex ? 6 : 4.5} fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" className={index === activeStrokeIndex ? 'animate-ping' : ''} opacity="0.6" />
-                <circle r={index === activeStrokeIndex ? 5 : 3.5} fill="#F59E0B" stroke="#FFFFFF" strokeWidth="1.5" />
-                {index === activeStrokeIndex && <text x="0" y="1" fontSize="4" fontWeight="bold" fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">شروع</text>}
+            {/* Starting Yellow Dot */}
+            {level <= 2 && !isCompleted && (
+              <g transform={`translate(${startPt.x}, ${startPt.y})`}>
+                <circle
+                  r="6"
+                  fill="#F59E0B"
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                  className="animate-ping"
+                  opacity="0.6"
+                />
+                <circle
+                  r="5"
+                  fill="#F59E0B"
+                  stroke="#FFFFFF"
+                  strokeWidth="1.5"
+                />
+                <text
+                  x="0"
+                  y="1"
+                  fontSize="4"
+                  fontWeight="bold"
+                  fill="#FFFFFF"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  شروع
+                </text>
               </g>
-            ))}
+            )}
 
             {/* Kid's Drawn Path */}
             {userPoints.length > 1 && (

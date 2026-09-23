@@ -44,22 +44,3 @@ export const FIRST_GRADE_WORDS: WordItem[] = [
   W('ghayeg','قایق',['ghaf','alef','ye','ghaf'],'⛵','وسیله روی آب',3),
   W('kelas','کِلاس',['kaf','lam','alef','sin'],'🏫','کلاس درس',3,['کلاس'])
 ];
-
-/**
- * تمرین اول عمداً از بانک بزرگ واژه‌ها جداست:
- * حداکثر سه حرف، واژه‌های آشنا و بدون شکل‌های سختِ اعراب‌گذاری.
- * این فهرست همان چیزی است که بازی جای خالی در شروع مسیر نشان می‌دهد.
- */
-export const FIRST_EXERCISE_WORDS: WordItem[] = [
-  W('first-ab', 'آب', ['alef', 'be'], '💧', 'آب', 1, ['اب']),
-  W('first-ba', 'با', ['be', 'alef'], '🤝', 'با', 1),
-  W('first-ma', 'ما', ['mim', 'alef'], '👫', 'ما', 1),
-  W('first-to', 'تو', ['te', 'vav'], '👉', 'تو', 1),
-  W('first-do', 'دو', ['dal', 'vav'], '2️⃣', 'دو', 1),
-  W('first-nan', 'نان', ['noon', 'alef', 'noon'], '🍞', 'نان', 1),
-  W('first-bad', 'باد', ['be', 'alef', 'dal'], '🌬️', 'باد', 1),
-  W('first-dad', 'داد', ['dal', 'alef', 'dal'], '🎁', 'داد', 1),
-  W('first-mah', 'ماه', ['mim', 'alef', 'he'], '🌙', 'ماه', 1),
-  W('first-tup', 'توپ', ['te', 'vav', 'pe'], '⚽', 'توپ', 1),
-  W('first-tut', 'توت', ['te', 'vav', 'te'], '🍓', 'توت', 1),
-];

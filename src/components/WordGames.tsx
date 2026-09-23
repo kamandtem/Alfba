@@ -1,20 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { FIRST_EXERCISE_WORDS } from '../data/words';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Volume2, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, Shuffle } from 'lucide-react';
+import { FIRST_GRADE_WORDS } from '../data/words';
 import { PERSIAN_LETTERS, toPersianDigits } from '../data/persianAlphabet';
 import { WordItem, PersianLetter } from '../types';
 import { getLetterById, computePersianForms, getLetterGlyph } from '../utils/persianEngine';
 import { sound } from '../utils/audio';
 import { MascotGuide } from './MascotGuide';
+import { boardLessonWords } from '../data/wordBank';
+import { useCurrentLesson } from '../utils/lessonState';
+import { plainWord } from '../utils/pieces';
 
 interface WordGamesProps {
   onActivityComplete: (type: 'word', id?: string) => void;
 }
 
 export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
-  const availableWords = FIRST_EXERCISE_WORDS;
+  const [lessonOrder] = useCurrentLesson();
+  const availableWords = useMemo(() => {
+    const allowed = new Set(boardLessonWords(lessonOrder).map(w => w.plain));
+    const exact = FIRST_GRADE_WORDS.filter(w => allowed.has(plainWord(w.word)));
+    return exact.length ? exact : FIRST_GRADE_WORDS.filter(w => {
+      const plain = plainWord(w.word);
+      return boardLessonWords(lessonOrder).some(source => source.lesson <= lessonOrder && source.plain === plain);
+    });
+  }, [lessonOrder]);
   const [wordIndex, setWordIndex] = useState(0);
-  const activeWord: WordItem = availableWords[wordIndex % Math.max(1, availableWords.length)] || FIRST_EXERCISE_WORDS[0];
+  const activeWord: WordItem = availableWords[wordIndex % Math.max(1, availableWords.length)] || FIRST_GRADE_WORDS[0];
 
   // Missing slot index
   const missingSlot = activeWord.missingIndex ?? 0;
@@ -29,6 +40,8 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
   const [options, setOptions] = useState<PersianLetter[]>([]);
   const autoTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(autoTimer.current), []);
+  useEffect(() => { setWordIndex(0); }, [lessonOrder]);
+
   useEffect(() => {
     setIsSolved(false);
     setShakingOptionId(null);
@@ -44,7 +57,7 @@ export const WordGames: React.FC<WordGamesProps> = ({ onActivityComplete }) => {
     setOptions(choices);
 
     sound.speakPersian(`جای خالی در کلمه ${activeWord.word} را با حرف مناسب پر کن.`);
-  }, [wordIndex, activeWord.id]);
+  }, [wordIndex, activeWord.id, lessonOrder]);
 
   // Handle option selection
   const handleSelectOption = (chosen: PersianLetter) => {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
-import { CurriculumLesson, bookLessonOf, kidDisplay, kidGlyph } from '../data/curriculum';
+import { CurriculumLesson, bookLessonOf } from '../data/curriculum';
 import { WORD_BANK } from '../data/wordBank';
 import { lessonOfWord, plainWord } from '../utils/pieces';
 import { parseSyllables, ParsedWord, SoundCell, SOUND_ONLY_UNTIL_BOOK, SYLLABLE_WORDS } from '../utils/syllables';
@@ -17,7 +17,7 @@ import { FeedbackState, FeedbackToast, praise } from './shared/Feedback';
  */
 
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D\u0640]/g, '');
-const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.emoji || '';
+const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.emoji || '📖';
 
 /** ۳ تا ۴ واژه برای درس انتخاب‌شده؛ فقط واژه‌هایی که همهٔ نشانه‌هایشان خوانده شده */
 export function syllableWordsFor(order: number): string[] {
@@ -31,7 +31,7 @@ export function syllableWordsFor(order: number): string[] {
   return out.length ? out : ['آب', 'بابا'];
 }
 
-type CombinationVowel = { id: string; lesson: number; forms: string[]; output: string };
+type CombinationVowel = { id: string; lesson: number; forms: string[] };
 type CombinationConsonant = { id: string; lesson: number; form: string; name: string };
 
 /** جدول ترکیبات مقدماتی کتاب: مصوت‌ها افقی، صامت‌های خوانده‌شده عمودی. */
@@ -59,7 +59,8 @@ const COMBINATION_CONSONANTS: CombinationConsonant[] = [
 ];
 
 const combinationText = (consonant: CombinationConsonant, vowel: CombinationVowel, form: string) => {
-  const base = consonant.name;
+  // شکل انتخاب‌شده را نگه می‌داریم: بـ + َ باید واقعاً «بـَ» بماند، نه «بَ».
+  const base = consonant.form;
   if (vowel.id === 'aa') return `${base}ا`;
   if (vowel.id === 'ou') return `${base}و`;
   if (vowel.id === 'ey') return `${base}ی`;
@@ -122,7 +123,7 @@ const SelectableWord: React.FC<{
   }, [parsed]);
 
   return <span ref={wrapRef} className="syl-word-select" dir="rtl">
-    <span ref={textRef} className="syl-word-visible">{parsed.word}</span>
+    <span ref={textRef} className="syl-word-visible tahriri">{parsed.word}</span>
     {boxes.map((box, i) => {
       const unit = parsed.units[i];
       if (!unit) return null;
@@ -227,10 +228,14 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       return;
     }
     sound.playPop();
-    if (sel && (u === sel.a - 1 || u === sel.b + 1) && rangeFree(u, u === sel.a - 1 ? sel.b : sel.a)) {
-      const anchor = u === sel.a - 1 ? sel.b : sel.a;
-      setSel({ a: Math.min(u, anchor), b: Math.max(u, anchor) }); swipe.current = { anchor };
-    } else { setSel({ a: u, b: u }); swipe.current = { anchor: u }; }
+    // با یک لمس روی هر صدای هجا، کل همان هجا انتخاب می‌شود.
+    // این جلوی گیرکردن واژه‌هایی مثل «اُردَک» را می‌گیرد: «اُر» یک‌جا انتخاب می‌شود.
+    const syllable = parsed.syllables.find(s => s.units.includes(u));
+    if (syllable) {
+      const a = Math.min(...syllable.units), b = Math.max(...syllable.units);
+      if (rangeFree(a, b)) { setSel({ a, b }); swipe.current = { anchor: u }; return; }
+    }
+    setSel({ a: u, b: u }); swipe.current = { anchor: u };
   };
   useEffect(() => {
     if (stage !== 1) return;
@@ -278,7 +283,7 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
   const cellTap = (j: number) => { if (stage !== 2) return; if (!picked) { if (!filled[j]) nudge('اول یک حرف از بالا انتخاب کن.', undefined, '👆'); return; } placeChip(picked, j); };
   const chipDown = (e: React.PointerEvent, c: Chip) => {
     if (stage !== 2 || c.used) return; e.preventDefault(); sound.playPop();
-    setPicked(c.id); setDrag({ kind: 'chip', chipId: c.id, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, label: kidGlyph(c.cell.glyph) });
+    setPicked(c.id); setDrag({ kind: 'chip', chipId: c.id, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, label: c.cell.glyph });
   };
 
   // کشیدن و رها کردن (گروه حروف یا یک حرف)
@@ -309,7 +314,7 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
     return <button key={`c${j}`} data-drop={`cell:${j}`} onClick={() => cellTap(j)}
       className={`syl-cell ${extra} ${c.mark ? 'is-mark' : ''} ${f ? 'filled' : ''} ${shake === `cell-${j}` ? 'shake' : ''} ${stage === 2 && picked && !f ? 'ready' : ''}`}
       style={soundOnly ? undefined : { gridColumn: 'span 1' }} aria-label={f ? speakable(f.text) : 'خانهٔ خالی'}>
-      {f ? <span className="tahriri">{kidGlyph(f.glyph)}</span> : c.mark ? <i className="syl-dash" aria-hidden="true" /> : <i className="syl-line" aria-hidden="true" />}
+      {f ? <span className="tahriri">{f.glyph}</span> : c.mark ? <i className="syl-dash" aria-hidden="true" /> : <i className="syl-line" aria-hidden="true" />}
     </button>;
   };
 
@@ -332,21 +337,21 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       </div>
       <div className="combination-vowel-rail" aria-label="مصوت‌ها">
         {combinationVowels.map(group => <div key={group.id} className="combination-vowel-group">
-          <span className="combination-group-label">{group.forms.map(kidDisplay).join(' ')}</span>
+          <span className="combination-group-label">{group.forms.join(' ')}</span>
           <div className="combination-vowel-forms">
-            {group.forms.map(form => <button key={`${group.id}-${form}`} className={`combination-vowel ${selectedVowel?.group.id === group.id && selectedVowel.form === form ? 'selected' : ''}`} onClick={() => chooseVowel(group, form)}>{kidDisplay(form)}</button>)}
+            {group.forms.map(form => <button key={`${group.id}-${form}`} className={`combination-vowel ${selectedVowel?.group.id === group.id && selectedVowel.form === form ? 'selected' : ''}`} onClick={() => chooseVowel(group, form)}>{form}</button>)}
           </div>
         </div>)}
       </div>
       <div className="combination-board-body">
         <div className="combination-consonant-rail" aria-label="صامت‌ها">
           {combinationConsonants.map(c => <button key={c.id} className={`combination-consonant tahriri ${selectedConsonant?.id === c.id ? 'selected' : ''}`} onClick={() => chooseConsonant(c)}>
-            <span>{kidGlyph(c.form)}</span><small>{c.name}</small>
+            <span>{c.form}</span><small>{c.name}</small>
           </button>)}
         </div>
         <div className="combination-stage" aria-live="polite">
-          {!combination && selectedConsonant && <span className="combination-stage-consonant tahriri">{kidGlyph(selectedConsonant.form)}</span>}
-          {!combination && selectedVowel && <span className="combination-stage-vowel tahriri">{kidDisplay(selectedVowel.form)}</span>}
+          {!combination && selectedConsonant && <span className="combination-stage-consonant tahriri">{selectedConsonant.form}</span>}
+          {!combination && selectedVowel && <span className="combination-stage-vowel tahriri">{selectedVowel.form}</span>}
           {combination && <button key={combinationNonce} className="combination-result tahriri" onClick={() => sound.speakPersian(speakable(combination))}>{combination}</button>}
           {!combination && <span className="combination-placeholder">اینجا ترکیب ساخته می‌شود</span>}
         </div>
@@ -357,7 +362,7 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       {!combinationConsonants.length && <p className="combination-empty">با خواندن درس «بـ ب»، صامت‌ها یکی‌یکی اینجا اضافه می‌شوند.</p>}
     </section> : soundOnly ? <section className="syl-sounds">
       <div className="syl-word-card"><span className="syl-emoji">{emojiOf(word)}</span><b className="tahriri" onClick={() => sound.speakPersian(speakable(word))}>{word}</b></div>
-      <div className="syl-tray" aria-label="صداهای درهم">{chips.map(c => <button key={c.id} className={`syl-chip tahriri ${c.used ? 'used' : ''} ${picked === c.id ? 'picked' : ''} ${c.cell.mark ? 'is-mark' : ''}`} onPointerDown={e => chipDown(e, c)} disabled={c.used}>{kidGlyph(c.cell.glyph)}</button>)}</div>
+      <div className="syl-tray" aria-label="صداهای درهم">{chips.map(c => <button key={c.id} className={`syl-chip tahriri ${c.used ? 'used' : ''} ${picked === c.id ? 'picked' : ''} ${c.cell.mark ? 'is-mark' : ''}`} onPointerDown={e => chipDown(e, c)} disabled={c.used}>{c.cell.glyph}</button>)}</div>
       <div className="syl-circles">{parsed.cells.map((c, j) => cellView(c, j, 'circle'))}</div>
     </section> :
     <section className="syl-table" style={{ gridTemplateColumns: `repeat(${N}, minmax(0, 1fr))` }} aria-label="جدول بخش‌ها">
@@ -371,7 +376,7 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
         className={`syl-slot ${sylDone[k] ? 'filled' : ''} ${stage === 1 && sel ? 'ready' : ''} ${shake === `syl-${k}` ? 'shake' : ''}`}>
         {sylDone[k] ? <>
           <b className="tahriri syl-slot-text">{s.glyph}</b>
-          {stage === 2 && <div className="syl-slot-chips">{chips.filter(c => c.cell.syl === k).map(c => <button key={c.id} className={`syl-chip mini tahriri ${c.used ? 'used' : ''} ${picked === c.id ? 'picked' : ''} ${c.cell.mark ? 'is-mark' : ''}`} onPointerDown={e => { e.stopPropagation(); chipDown(e, c); }} onClick={e => e.stopPropagation()} disabled={c.used}>{kidGlyph(c.cell.glyph)}</button>)}</div>}
+          {stage === 2 && <div className="syl-slot-chips">{chips.filter(c => c.cell.syl === k).map(c => <button key={c.id} className={`syl-chip mini tahriri ${c.used ? 'used' : ''} ${picked === c.id ? 'picked' : ''} ${c.cell.mark ? 'is-mark' : ''}`} onPointerDown={e => { e.stopPropagation(); chipDown(e, c); }} onClick={e => e.stopPropagation()} disabled={c.used}>{c.cell.glyph}</button>)}</div>}
         </> : <span className="syl-slot-empty">بخش {toFa(k + 1)}</span>}
       </div>)}
       {/* طبقهٔ سوم: یک خانه برای هر صدا */}

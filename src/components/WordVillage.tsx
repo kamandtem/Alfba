@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Eraser, Flag, RefreshCw, Undo2, Volume2 } from 'lucide-react';
-import { CURRICULUM, LETTER_BOX, bookLessonOf, kidGlyph } from '../data/curriculum';
+import { CURRICULUM, LETTER_BOX } from '../data/curriculum';
 import { boardLessonWords, boardSuggestWords, dictationWords, DictationItem, findWord, WordEntry } from '../data/wordBank';
 import { finishProblem, parseToken, plainSequence, renderSequence, tashdidProfile, validateSequence } from '../utils/pieces';
 import { sound } from '../utils/audio';
@@ -45,6 +45,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   const [drag, setDrag] = useState<Drag | null>(null);
   const [boxOpen, setBoxOpen] = useState(false);
   const [boxKey, setBoxKey] = useState<string | null>(null);
+  const [boxAnchor, setBoxAnchor] = useState<number | null>(null);
   const [fb, setFb] = useState<FeedbackState>(null);
   const [shakeWord, setShakeWord] = useState<string | null>(null);
   const [solved, setSolved] = useState(false);
@@ -277,7 +278,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     if (!drag) return null;
     if (drag.kind === 'word') return null;
     if (drag.kind === 'free' && !drag.moved) return null;
-    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{kidGlyph(parseToken(drag.token).glyph)}</span>;
+    return <span className="drag-ghost tahriri" style={{ left: drag.cx, top: drag.cy }}>{parseToken(drag.token).glyph}</span>;
   };
 
   const dragFreeId = drag?.kind === 'free' && drag.moved ? drag.id : null;
@@ -319,10 +320,10 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
               type="button"
               className={`wv-reveal-word ${revealedTarget ? 'revealed' : ''}`}
               onClick={() => { setRevealedTarget(true); sound.speakPersian(speakable(target.word)); }}
-              aria-label={revealedTarget ? `کلمهٔ ${target.word}` : 'نوشته سانسور شده؛ برای دیدن لمس کن'}
+              aria-label={revealedTarget ? `کلمهٔ ${target.word}` : 'نوشته پوشانده شده؛ برای دیدن لمس کن'}
             >
               <span className="wv-reveal-text tahriri">{target.word}</span>
-              {!revealedTarget && <span className="wv-censor" aria-hidden="true"><i>سانسور</i></span>}
+              {!revealedTarget && <span className="wv-censor" aria-hidden="true" />}
             </button>}
       </div>
       <button onClick={() => sound.speakPersian(speakable(target.word))} aria-label="شنیدن"><Volume2 /></button>
@@ -352,7 +353,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
       <div className={`wv-line ${hoverLine ? 'hot' : ''}`} style={{ top: lineY }} />
       <div className="wv-band" style={{ top: lineY - band, height: band * 2 }} />
 
-      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{kidGlyph(parseToken(p.token).glyph)}</span>)}
+      {free.map(p => p.id === dragFreeId ? null : <span key={p.id} className="wv-piece tahriri" style={{ left: p.x, top: p.y }} onPointerDown={e => startFree(e, p)}>{parseToken(p.token).glyph}</span>)}
 
       {words.map(w => {
         const defs = w.seq.map(s => parseToken(s.token));
@@ -377,12 +378,17 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     {boxOpen && <div className="letter-box-backdrop" onClick={() => setBoxOpen(false)}>
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
         <header><img className="letter-box-chest" src="/assets/ui/letter-chest.svg" alt="" draggable={false} /><div><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلش را روی تخته بکش</small></div><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
-        {boxKey && <div className="box-forms">
-          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
+        {boxKey && <div className="box-forms" style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
+          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{parseToken(t).glyph}</span>)}
         </div>}
         <div className="box-keys">
-          {LETTER_BOX.map(k => <button key={k.id} className={`box-key tahriri ${boxKey === k.id ? 'active' : ''} ${k.lesson > lessonOrder ? 'later' : 'read'} ${mode === 'dictation' ? 'dict' : ''}`} onClick={() => { setBoxKey(k.id); sound.playPop(); }}>
-            {k.pieces.map(t => kidGlyph(parseToken(t).glyph)).join(' ')}
+          {LETTER_BOX.map(k => <button key={k.id} className={`box-key tahriri ${boxKey === k.id ? 'active' : ''} ${k.lesson > lessonOrder ? 'later' : 'read'} ${mode === 'dictation' ? 'dict' : ''}`} onClick={e => {
+            const parent = e.currentTarget.closest('.letter-box')?.getBoundingClientRect();
+            const rect = e.currentTarget.getBoundingClientRect();
+            setBoxAnchor(parent ? ((rect.left + rect.width / 2 - parent.left) / parent.width * 100) : 50);
+            setBoxKey(k.id); sound.playPop();
+          }}>
+            {k.pieces.map(t => parseToken(t).glyph).join(' ')}
           </button>)}
         </div>
       </section>

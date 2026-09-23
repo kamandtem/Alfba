@@ -47,8 +47,8 @@ img{-webkit-user-drag:none}
 
 .map-topbar{position:fixed;z-index:20;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(var(--sat) + 8px) calc(var(--sar) + 12px) 14px calc(var(--sal) + 12px);background:linear-gradient(180deg,rgba(87,195,241,.96) 55%,rgba(87,195,241,0));pointer-events:none}
 .map-topbar>*{pointer-events:auto}
-.map-topbar .map-svg-button{width:80px;height:80px}
-@media (max-width:420px){.map-topbar .map-svg-button{width:70px;height:70px}}
+.map-topbar .map-svg-button{width:88px;height:88px}
+@media (max-width:420px){.map-topbar .map-svg-button{width:78px;height:78px}}
 .map-title-ribbon{display:grid;justify-items:center;padding:4px 18px 6px;border:3px solid #fff;border-radius:20px;background:linear-gradient(180deg,#FFE07A,#FFB52E);color:var(--brown);box-shadow:0 4px 0 #D98A0B,0 8px 14px rgba(40,60,90,.2);min-width:0}
 .map-title-ribbon small{font-size:.68rem;font-weight:800;opacity:.85;line-height:1.5}
 .map-title-ribbon strong{font-size:clamp(1rem,4.4vw,1.3rem);font-weight:900;line-height:1.4;white-space:nowrap}
