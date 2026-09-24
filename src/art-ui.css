@@ -187,6 +187,16 @@
 .vol-fill{clip-path:inset(0 calc(100% - var(--v)) 0 0 round 999px)}
 .vol-knob{left:var(--v);top:50%;height:230%;width:auto;aspect-ratio:20.44/20.89;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 2px oklch(35% .08 30/.3));transition:transform 120ms var(--ease-out)}
 .vol-slider:active .vol-knob{transform:translate(-50%,-50%) scale(1.12)}
+.font-choice-panel{position:absolute;z-index:3;left:13%;top:62%;width:74%;padding:5px 6px 6px;border:2px solid oklch(99% .02 85/.9);border-radius:15px;background:oklch(99% .025 85/.86);color:oklch(32% .08 45);font-family:var(--ui-font);text-align:center;box-shadow:0 4px 8px oklch(35% .08 40/.16)}
+.font-choice-panel>strong{display:block;font-size:clamp(.54rem,2.1vw,.72rem);font-weight:1000;line-height:1.35}
+.font-choice-options{display:flex;gap:5px;margin-top:4px}
+.font-choice{flex:1;min-width:0;padding:3px 2px 2px;border:2px solid oklch(79% .08 50/.65);border-radius:10px;background:oklch(100% .01 85/.76);color:inherit;font:inherit;font-size:clamp(.5rem,1.9vw,.66rem);font-weight:900;cursor:pointer}
+.font-choice.active{border-color:oklch(65% .18 145);background:oklch(91% .12 145/.7);box-shadow:inset 0 0 0 1px oklch(99% .03 85)}
+.font-choice:focus-visible{outline:2px solid oklch(68% .17 230);outline-offset:2px}
+.font-choice-preview{display:block;font-size:clamp(.92rem,3.5vw,1.25rem);line-height:1.1}
+.font-choice-tahriri{font-family:"Tahriri",serif;font-weight:400}
+.font-choice-vazirmatn{font-family:"Vazirmatn",sans-serif;font-weight:400}
+.font-choice-panel>small{display:block;margin-top:3px;font-size:clamp(.4rem,1.45vw,.52rem);font-weight:700;opacity:.72}
 @media (prefers-reduced-motion:reduce){.settings-sea i,.sound-panel,.settings-scene{animation:none}}
 
 /* =====================================================================

@@ -11,6 +11,7 @@ import { MapScreen } from './shared/MapScreen';
 import { MapSpot } from './shared/MapSpot';
 import { useBackHandler } from '../utils/backNav';
 import { setStatusBarColor, vibrate } from '../utils/native';
+import { getEducationalFontFamily } from '../utils/fontSettings';
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 import { CloseArt, OkArt } from './shared/ArtButtons';
 import { SyllableGame } from './SyllableGame';
@@ -99,7 +100,6 @@ export function useAutoNext() {
    - نشانه همیشه کامل داخل کادر جا می‌شود (اندازه‌گیری پیکسلی، نه متریک فونت؛ مثلاً مدِّ «آ» بیرون نمی‌زند)
    - برای قبول شدن باید حدود ۷۰٪ خط‌چین پوشانده شود و بیشترِ خط کودک روی خود نشانه باشد
    - اگر کودک زیاد از خط‌چین بیرون برود، همان لحظه هشدار می‌گیرد */
-const TRACE_FONT = '"Tahriri"';
 const NEED_COVER = 0.7;      // حداقل پوشش خط‌چین
 const NEED_PRECISION = 0.72; // حداقل سهم خطِ کودک که روی/نزدیک نشانه است
 const AUTO_COVER = 0.9;      // با این پوشش، خودکار قبول می‌شود
@@ -114,7 +114,7 @@ function fitText(text: string, w: number, h: number) {
   const cw = Math.ceil(probe * (text.length + 2) * 1.2) + 200, ch = probe * 3;
   c.width = cw; c.height = ch;
   const g = c.getContext('2d', { willReadFrequently: true })!;
-  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `${probe}px ${TRACE_FONT}`; g.fillStyle = '#000';
+  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `${probe}px ${getEducationalFontFamily()}`; g.fillStyle = '#000';
   const ox = cw / 2, oy = ch / 2;
   g.fillText(text, ox, oy);
   g.lineWidth = probe * 0.02; g.strokeText(text, ox, oy);
@@ -130,7 +130,7 @@ function fitText(text: string, w: number, h: number) {
 function textMask(text: string, L: TraceLayout, grow: number) {
   const c = document.createElement('canvas'); c.width = L.w; c.height = L.h;
   const m = c.getContext('2d', { willReadFrequently: true })!;
-  m.direction = 'rtl'; m.textAlign = 'center'; m.textBaseline = 'middle'; m.font = `${L.size}px ${TRACE_FONT}`;
+  m.direction = 'rtl'; m.textAlign = 'center'; m.textBaseline = 'middle'; m.font = `${L.size}px ${getEducationalFontFamily()}`;
   m.fillStyle = '#000'; m.strokeStyle = '#000'; m.lineJoin = 'round'; m.lineCap = 'round';
   m.fillText(text, L.x, L.y);
   if (grow > 0) { m.lineWidth = grow * 2; m.strokeText(text, L.x, L.y); }
@@ -172,7 +172,7 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
   const drawGuide = useCallback(async () => {
     const wrap = wrapRef.current, guide = guideRef.current, ink = inkRef.current;
     if (!wrap || !guide || !ink) return;
-    try { await document.fonts.load(`100px ${TRACE_FONT}`); } catch { /* ignore */ }
+    try { await document.fonts.load(`100px ${getEducationalFontFamily()}`); } catch { /* ignore */ }
     const w = wrap.clientWidth;
     const h = Math.round(Math.max(280, Math.min(520, w * 0.8, window.innerHeight * 0.56)));
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -181,7 +181,7 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     const L: TraceLayout = { w, h, size: fit.size, x: fit.x, y: fit.y, glyph: null, near: null, strokes: [] };
     const ctx = guide.getContext('2d')!;
     ctx.clearRect(0, 0, w, h);
-    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${L.size}px ${TRACE_FONT}`;
+    ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${L.size}px ${getEducationalFontFamily()}`;
     // شکل توخالی: درون کم‌رنگ، دور خط‌چین
     ctx.fillStyle = 'rgba(206,218,236,.6)';
     ctx.fillText(displayText, L.x, L.y);

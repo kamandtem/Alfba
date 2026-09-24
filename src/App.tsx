@@ -19,6 +19,7 @@ import { loadProgress, recordActivityCompleted } from './utils/progressStorage';
 import { sound } from './utils/audio';
 import { initBackNavigation, useBackHandler } from './utils/backNav';
 import { initNativeChrome, setStatusBarColor } from './utils/native';
+import { getEducationalFont, setEducationalFont, subscribeEducationalFont } from './utils/fontSettings';
 
 const STATUS_COLORS: Partial<Record<ActiveScreen, string>> = { splash: '#57C3F1', village_map: '#57C3F1', recognition_village: '#57C3F1', word_village: '#6FE3AE', sentence_builder: '#7CCBFF', my_progress: '#8FD3FF' };
 
@@ -28,6 +29,13 @@ const RESUMABLE: Partial<Record<ActiveScreen, string>> = { recognition_village: 
 const readResume = (): ActiveScreen | null => { try { const v = localStorage.getItem(RESUME_KEY) as ActiveScreen | null; return v && RESUMABLE[v] ? v : null; } catch { return null; } };
 
 export default function App() {
+  const [educationalFont, setFont] = useState(getEducationalFont);
+
+  useEffect(() => {
+    setEducationalFont(educationalFont);
+    return subscribeEducationalFont(setFont);
+  }, [educationalFont]);
+
   return <><AppScreens /><ExitDialog /></>;
 }
 

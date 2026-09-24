@@ -8,6 +8,7 @@ import { parseSyllables, ParsedWord, SoundCell, SOUND_ONLY_UNTIL_BOOK, SYLLABLE_
 import { sound } from '../utils/audio';
 import { shuffle, toFa } from '../utils/lessonState';
 import { vibrate } from '../utils/native';
+import { getEducationalFontFamily } from '../utils/fontSettings';
 import { FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 import { RoundComplete } from './shared/RoundComplete';
 import { SignText } from './shared/SignText';
@@ -174,7 +175,7 @@ const SelectableWord: React.FC<{
       setFontPx(old => (old === px ? old : px));
     };
     fit();
-    try { document.fonts.load('100px "Tahriri"', parsed.word).then(fit).catch(() => undefined); } catch { /* ignore */ }
+    try { document.fonts.load(`100px ${getEducationalFontFamily()}`, parsed.word).then(fit).catch(() => undefined); } catch { /* ignore */ }
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
     ro?.observe(row);
     return () => { alive = false; ro?.disconnect(); };
@@ -235,7 +236,7 @@ const SelectableWord: React.FC<{
       } else setBoxes(next);
     };
     measure();
-    try { document.fonts.load('80px "Tahriri"', parsed.word).then(measure).catch(() => undefined); } catch { /* ignore */ }
+    try { document.fonts.load(`80px ${getEducationalFontFamily()}`, parsed.word).then(measure).catch(() => undefined); } catch { /* ignore */ }
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     if (observer) observer.observe(wrap);
     window.addEventListener('resize', measure);

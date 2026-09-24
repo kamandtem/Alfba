@@ -6,6 +6,7 @@
  * همه تمرین‌های برنامه فقط از واژه‌هایی استفاده می‌کنند که همه نشانه‌هایشان تا درسِ انتخاب‌شده آموزش داده شده باشد.
  */
 
+import { isVazirmatnSelected } from '../utils/fontSettings';
 const ZWJ = '\u200D';
 /** شکل‌های نمایشی بدون کشیده؛ با ZWJ تا خود glyph فونت تحریری نمایش داده شود */
 export const G = {
@@ -31,6 +32,16 @@ export const KID_FORMS: Record<string, string> = { [ZWJ + 'ه' + ZWJ]: '\uE106',
 /** نمایش یک قطعهٔ آموزشی با glyph خود فونت، حتی وقتی کشیده به صورت ZWJ ذخیره شده باشد. */
 export const kidGlyph = (g: string) => {
   const normalized = g.replace(/\u0640/g, ZWJ);
+  if (isVazirmatnSelected()) {
+    return normalized
+      .replace(/\uE101/g, 'ب')
+      .replace(/\uE102/g, 'ن')
+      .replace(/\uE103/g, 'م')
+      .replace(/\uE104/g, 'ه')
+      .replace(/\uE105/g, 'ت')
+      .replace(/\uE106|\uE107/g, 'ه')
+      .replace(/\u200D/g, '');
+  }
   if (KID_FORMS[normalized]) return KID_FORMS[normalized];
   const init = normalized.match(/^([بنمهت])\u200D([\u064B-\u0652\u0670اوی]*)$/);
   if (init && KID_INIT[init[1]]) return KID_INIT[init[1]] + init[2];
