@@ -27,7 +27,23 @@ npm run android:sync
 npm run android:open
 ```
 
-در Android Studio گزینه Build APK را اجرا کنید. برای GitHub کافی است پروژه را روی شاخه `main` پوش کنید یا workflow با نام **Build Android APK** را دستی اجرا کنید؛ فایل APK در Artifacts همان اجرا قرار می‌گیرد.
+برای گرفتن خروجی ریلیز از GitHub Actions:
+
+1. فایل اصلی پروژه را روی GitHub قرار دهید.
+2. مقادیر چهار Secret زیر را در `Settings > Secrets and variables > Actions` وارد کنید:
+   - `ANDROID_KEYSTORE_BASE64`
+   - `ANDROID_KEYSTORE_PASSWORD`
+   - `ANDROID_KEY_ALIAS`
+   - `ANDROID_KEY_PASSWORD`
+3. یک Release Tag مثل `v1.0.0` بسازید و push کنید، یا workflow با نام **Build Android Release APK** را دستی اجرا کنید.
+
+فایل امضاشده و checksum در بخش Artifacts همان اجرای workflow قرار می‌گیرد. کلید امضا عمداً داخل مخزن نیست؛ فایل جداگانهٔ secrets که همراه این پروژه تحویل شده، مقادیر لازم را دارد.
+
+برای بررسی محلی قبل از push:
+
+```bash
+npm run release:check
+```
 
 ## معماری آموزشی (نسخه جزیره الفبا)
 
