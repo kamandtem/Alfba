@@ -196,13 +196,24 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
     return letterPieces.length === 1 ? kidGlyph(getLetterGlyph(letter,form)) : getLetterGlyph(letter,form);
   };
 
+  const variantForms = selectedLetter?.id === 'he'
+    ? [
+        { label: 'تنها', glyph: selectedLetter.isolated, preferredForm: 'isolated' as const },
+        { label: 'آخر', glyph: selectedLetter.final, preferredForm: 'final' as const },
+        { label: 'میانی', glyph: selectedLetter.medial, preferredForm: 'medial' as const },
+        { label: 'اول', glyph: selectedLetter.initial, preferredForm: 'initial' as const },
+      ]
+    : selectedLetter ? [
+        { label: 'اول', glyph: selectedLetter.initial, preferredForm: 'initial' as const },
+        { label: 'میانی', glyph: selectedLetter.medial, preferredForm: 'medial' as const },
+        { label: 'آخر', glyph: selectedLetter.final, preferredForm: 'final' as const },
+        { label: 'تنها', glyph: selectedLetter.isolated, preferredForm: 'isolated' as const },
+      ] : [];
+
   const variantButtons = selectedLetter ? (
-    <div className="variant-strip letter-variant-popover" style={{ '--variant-anchor': `${variantAnchor}%` } as React.CSSProperties} aria-label={`شکل‌های نوشتاری ${selectedLetter.name}`}>
+    <div className={`variant-strip letter-variant-popover ${selectedLetter.id === 'he' ? 'he-variant-order' : ''}`} style={{ '--variant-anchor': `${variantAnchor}%` } as React.CSSProperties} aria-label={`شکل‌های نوشتاری ${selectedLetter.name}`}>
       <strong>{selectedLetter.name}</strong>
-      <TrayButton label="اول" glyph={selectedLetter.initial} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'initial'}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>
-      <TrayButton label="میانی" glyph={selectedLetter.medial} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'medial'}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>
-      <TrayButton label="آخر" glyph={selectedLetter.final} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'final'}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>
-      <TrayButton label="تنها" glyph={selectedLetter.isolated} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:'isolated'}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>
+      {variantForms.map(form => <TrayButton key={form.preferredForm} label={form.label} glyph={form.glyph} color={selectedLetter.color} payload={{type:'letter',id:selectedLetter.id,preferredForm:form.preferredForm}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>)}
       {selectedLetter.id==='alef' && <TrayButton label="آ اول و آخر" glyph="آ" color={selectedLetter.color} payload={{type:'letter',id:'alef',customGlyph:'آ'}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>}
       {selectedLetter.id==='alef' && HARAKAT_LIST.slice(0,3).map(h=><TrayButton key={`a-${h.id}`} label={`الف با ${h.name.split(' ')[0]}`} glyph={`ا${h.symbol}`} color={h.color} payload={{type:'combo',id:'alef',harakatId:h.id}} add={addPayload} drag={trayDrag} touchDrag={startTrayPointer} suppressClick={suppressTrayClick}/>)}
       

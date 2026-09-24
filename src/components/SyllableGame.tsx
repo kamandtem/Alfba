@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
-import { CurriculumLesson, bookLessonOf, kidDisplay } from '../data/curriculum';
+import { CURRICULUM, CurriculumLesson, bookLessonOf, kidDisplay } from '../data/curriculum';
 import { boardLessonWords, WORD_BANK, emojiText, hasRealEmoji } from '../data/wordBank';
 import { WordPic } from './shared/WordPic';
 import { lessonOfWord, plainWord } from '../utils/pieces';
@@ -23,15 +23,24 @@ const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.em
 
 /** ۳ تا ۴ واژه برای درس انتخاب‌شده؛ فقط واژه‌هایی که همهٔ نشانه‌هایشان خوانده شده */
 export function syllableWordsFor(order: number): string[] {
-  const o = Math.max(2, order);
+  const o = Math.max(1, order);
   if (SYLLABLE_EXCEPTION_WORDS[o]) return SYLLABLE_EXCEPTION_WORDS[o];
   const book = bookLessonOf(o);
   const out: string[] = [];
-  for (let b = book; b >= 1 && out.length < 4; b--) {
-    for (const w of SYLLABLE_WORDS[b] || []) if (out.length < 4 && !out.includes(w) && !SYLLABLE_EXCLUDED_WORDS.has(w) && lessonOfWord(w) <= o) out.push(w);
-    if (b === book && out.length >= 3) break;
+  const add = (w: string) => {
+    if (out.length >= 5 || out.includes(w) || SYLLABLE_EXCLUDED_WORDS.has(w) || lessonOfWord(w) > o) return;
+    try { parseSyllables(w); } catch { return; }
+    out.push(w);
+  };
+  // اول واژه‌های خودِ نشانهٔ انتخاب‌شده را می‌آوریم. این جلوی افتادن درس‌هایی مثل «گـ گ»
+  // روی فهرست درس قبلی (پـ پ) را می‌گیرد.
+  (CURRICULUM[o - 1]?.likeWords || []).forEach(w => add(w.word));
+  boardLessonWords(o).forEach(w => add(w.word));
+  for (let b = book; b >= 1 && out.length < 5; b--) {
+    (SYLLABLE_WORDS[b] || []).forEach(add);
   }
-  return out.length ? out : ['آب', 'بابا'];
+  if (out.length < 4) WORD_BANK.filter(w => w.lesson <= o).forEach(w => add(w.word));
+  return out.slice(0, 5).length >= 4 ? out.slice(0, 5) : (out.length ? out : ['آب', 'بابا', 'با', 'باد']);
 }
 
 type CombinationVowel = { id: string; lesson: number; forms: string[] };
@@ -204,8 +213,11 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
   const [selectedVowel, setSelectedVowel] = useState<{ group: CombinationVowel; form: string } | null>(null);
   const [combination, setCombination] = useState('');
   const [combinationNonce, setCombinationNonce] = useState(0);
+  const [showHint, setShowHint] = useState(() => {
+    try { return localStorage.getItem('alefba_syllable_hint_closed_v1') !== '1'; } catch { return true; }
+  });
   const words = useMemo(() => syllableWordsFor(lesson.order), [lesson.order]);
-  const soundOnly = bookLessonOf(Math.max(2, lesson.order)) <= SOUND_ONLY_UNTIL_BOOK;
+  const soundOnly = bookLessonOf(Math.max(1, lesson.order)) <= SOUND_ONLY_UNTIL_BOOK;
   const [idx, setIdx] = useState(0);
   const word = words[idx % words.length];
   const parsed: ParsedWord = useMemo(() => parseSyllables(word), [word]);
@@ -377,13 +389,18 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
     : soundOnly ? 'صداهای کلمه را یکی‌یکی از جعبه بردار و به ترتیب در گردی‌ها بگذار.'
     : stage === 1 ? 'با انگشت روی حرف‌های یک بخش دست بکش، بعد آن را در خانهٔ همان بخش در طبقهٔ دوم بگذار.'
     : 'حرف‌های هر بخش را یکی‌یکی بردار و در خانه‌های طبقهٔ سوم بگذار. هر خانه فقط یک حرف!';
+  const cellGlyph = (c: SoundCell) => {
+    if (c.mark) return `ـ${c.text}`;
+    // در ردیف آخر هر صدا مستقل است؛ فقط «مـ» شکل آموزشیِ ویژهٔ کتاب را حفظ می‌کند.
+    return c.text === 'م' ? kidDisplay('مـ') : kidDisplay(c.text);
+  };
 
   const cellView = (c: SoundCell, j: number, extra = '') => {
     const f = filled[j];
     return <button key={`c${j}`} data-drop={`cell:${j}`} onClick={() => cellTap(j)}
       className={`syl-cell ${extra} ${c.mark ? 'is-mark' : ''} ${f ? 'filled' : ''} ${shake === `cell-${j}` ? 'shake' : ''} ${stage === 2 && picked && !f ? 'ready' : ''}`}
       style={soundOnly ? undefined : { gridColumn: 'span 1' }} aria-label={f ? speakable(f.text) : 'خانهٔ خالی'}>
-      {f ? <span className="tahriri">{f.glyph}</span> : c.mark ? <i className="syl-dash" aria-hidden="true" /> : <i className="syl-line" aria-hidden="true" />}
+      {f ? <span className="tahriri">{cellGlyph(f)}</span> : c.mark ? <i className="syl-dash" aria-hidden="true" /> : <i className="syl-line" aria-hidden="true" />}
     </button>;
   };
 
@@ -396,7 +413,13 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       <button className={section === 'syllable' ? 'active' : ''} onClick={() => { setSection('syllable'); sound.playPop(); }}>بخش‌بخش کردن</button>
       <button className={section === 'combination' ? 'active' : ''} onClick={() => { setSection('combination'); sound.playPop(); }}>ترکیبات</button>
     </nav>
-    {section === 'syllable' && <p className="syl-hint">{hint}</p>}
+    {section === 'syllable' && showHint && <div className="syl-hint">
+      <span>{hint}</span>
+      <button type="button" aria-label="بستن راهنما" onClick={() => {
+        setShowHint(false);
+        try { localStorage.setItem('alefba_syllable_hint_closed_v1', '1'); } catch { /* ignore */ }
+      }}>×</button>
+    </div>}
 
     {section === 'combination' ? <section className="combination-game" aria-label="بخش ترکیبات">
       <div className="combination-caption">

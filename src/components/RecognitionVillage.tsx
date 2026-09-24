@@ -143,7 +143,8 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     list.push({ text: formsText, label: `نشانهٔ «${kidDisplay(lesson.sign)}»` });
     if (lesson.forms.length > 2) lesson.forms.forEach(f => list.push({ text: f, label: `یک شکل از «${kidDisplay(lesson.sign)}»` }));
     const traceWords = [18, 26, 30].includes(lesson.order) ? boardLessonWords(lesson.order) : WORD_BANK.filter(w => w.lesson === lesson.order);
-    traceWords.slice(0, 4).forEach(w => list.push({ text: w.word, label: hasRealEmoji(w.emoji) ? `واژهٔ درس: ${w.emoji}` : 'واژهٔ درس' }));
+    // بازی اول فقط برای کشیدن واژه‌های کوتاه است: هیچ واژهٔ چهارحرفی یا بلندتر وارد نشود.
+    traceWords.filter(w => [...plainWord(w.word)].length <= 3).slice(0, 4).forEach(w => list.push({ text: w.word, label: hasRealEmoji(w.emoji) ? `واژهٔ درس: ${w.emoji}` : 'واژهٔ درس' }));
     return list;
   }, [lesson]);
   const [index, setIndex] = useState(0);

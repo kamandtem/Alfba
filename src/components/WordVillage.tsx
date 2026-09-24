@@ -394,8 +394,8 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     {boxOpen && <div className="letter-box-backdrop" onClick={() => setBoxOpen(false)}>
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
         <header><img className="letter-box-chest" src="/assets/ui/letter-chest.svg" alt="" draggable={false} /><div><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلش را روی تخته بکش</small></div><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
-        {boxKey && <div className="box-forms" style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
-          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
+        {boxKey && <div className={`box-forms ${boxKey === 'he' ? 'he-box-forms' : ''}`} style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
+          {(boxKey === 'he' ? ['ه', 'ـه', 'ـهـ', 'هـ'] : LETTER_BOX.find(k => k.id === boxKey)!.pieces).map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
           {LETTER_BOX.find(k => k.id === boxKey)!.hint && <small className="box-form-hint">{LETTER_BOX.find(k => k.id === boxKey)!.hint}</small>}
         </div>}
         <div className="box-keys">

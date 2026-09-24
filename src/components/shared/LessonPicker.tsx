@@ -24,7 +24,11 @@ export const LessonSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ 
           className={`lesson-tile ${l.order === lesson ? 'active' : ''} ${l.order < lesson ? 'done' : ''} ${l.part === 2 ? 'part2' : ''}`}
           onClick={() => { setLesson(l.order); sound.playPop(); sound.speakPersian(`نشانهٔ ${l.spoken}`); window.setTimeout(onClose, 180); }}>
           <span className="lesson-tile-num">{toFa(l.order)}</span>
-          <b className="tahriri">{kidDisplay(l.sign)}</b>
+          {l.order === 27
+            ? <b className="tahriri lesson-tile-forms" aria-label="شکل‌های حرف ه">
+                {['ه', 'ـه', 'ـهـ', 'هـ'].map(form => <span key={form}>{kidDisplay(form)}</span>)}
+              </b>
+            : <b className="tahriri">{kidDisplay(l.sign)}</b>}
           <small>{weekLabel(l.week)}</small>
           {l.order === today && <em>امروز ⭐</em>}
         </button>)}
