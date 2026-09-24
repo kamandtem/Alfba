@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Eraser, RefreshCw, Volume2 } from 'lucide-react';
 import { CURRICULUM, CurriculumLesson, LikeWord, kidDisplay } from '../data/curriculum';
-import { boardLessonWords, WORD_BANK } from '../data/wordBank';
+import { boardLessonWords, WORD_BANK, hasRealEmoji } from '../data/wordBank';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
 import { hasSign as wordHasSign, lessonOfWord, plainWord } from '../utils/pieces';
@@ -143,7 +143,7 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     list.push({ text: formsText, label: `نشانهٔ «${kidDisplay(lesson.sign)}»` });
     if (lesson.forms.length > 2) lesson.forms.forEach(f => list.push({ text: f, label: `یک شکل از «${kidDisplay(lesson.sign)}»` }));
     const traceWords = [18, 26, 30].includes(lesson.order) ? boardLessonWords(lesson.order) : WORD_BANK.filter(w => w.lesson === lesson.order);
-    traceWords.slice(0, 4).forEach(w => list.push({ text: w.word, label: `واژهٔ درس: ${w.emoji}` }));
+    traceWords.slice(0, 4).forEach(w => list.push({ text: w.word, label: hasRealEmoji(w.emoji) ? `واژهٔ درس: ${w.emoji}` : 'واژهٔ درس' }));
     return list;
   }, [lesson]);
   const [index, setIndex] = useState(0);
@@ -363,9 +363,10 @@ const lessonPictureWords = (order: number): LikeWord[] => {
   const out: LikeWord[] = [];
   const add = (word: string, emoji = '') => {
     const plain = plainWord(word);
-    if (seen.has(plain)) return;
+    // «چی مثلِ چی» و فلش‌کارت بازی تصویری‌اند: واژهٔ بی‌تصویر اینجا نمی‌آید
+    if (seen.has(plain) || !hasRealEmoji(emoji)) return;
     seen.add(plain);
-    out.push({ word, emoji: emoji || '📖' });
+    out.push({ word, emoji });
   };
   for (let n = 1; n <= order; n++) {
     CURRICULUM[n - 1]?.likeWords.forEach(w => { if (n === order || lessonOfWord(w.word) <= order) add(w.word, w.emoji); });

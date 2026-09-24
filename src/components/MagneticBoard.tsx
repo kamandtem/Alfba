@@ -6,7 +6,8 @@ import { PersianLetter, PlacedMagneticPiece, WordItem } from '../types';
 import { clusterPieces, computePersianForms, findSnapCandidate, getHarakatById, getLetterById, getLetterGlyph, normalizePersian } from '../utils/persianEngine';
 import { sound } from '../utils/audio';
 import { toFa, useCurrentLesson } from '../utils/lessonState';
-import { boardLessonWords } from '../data/wordBank';
+import { boardLessonWords, emojiText } from '../data/wordBank';
+import { WordPic } from './shared/WordPic';
 import { plainWord, tashdidProfile } from '../utils/pieces';
 import { kidGlyph } from '../data/curriculum';
 
@@ -222,7 +223,7 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
     <div ref={boardRef} className="word-board" onPointerMove={movePiece} onPointerUp={endPieceDrag} onPointerCancel={endPieceDrag} onDragOver={e=>e.preventDefault()} onDrop={drop}>
       <div className="board-baseline"/>
       {guided&&<button className="challenge-chip" onClick={()=>{setChallengeRevealed(true);sound.speakPersian(challenge.word)}} aria-label={`کلمهٔ ${toFa(challengeIndex + 1)}، برای دیدن نوشته لمس کن`}>
-        <span>{challenge.imageEmoji}</span><small>کلمهٔ {toFa(challengeIndex + 1)}</small><b className={challengeRevealed?'revealed':''}>{challenge.word}</b><Volume2/>
+        <WordPic value={challenge.imageEmoji} /><small>کلمهٔ {toFa(challengeIndex + 1)}</small><b className={challengeRevealed?'revealed':''}>{challenge.word}</b><Volume2/>
       </button>}
       {snap&&<span className="snap-ring" style={{left:snap.x,top:snap.y}}/>}
       {pieces.map(piece=>{
@@ -239,7 +240,7 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
         <button onClick={speak} aria-label="خواندن"><Volume2/></button><button onClick={detach} aria-label="جدا کردن"><RotateCcw/></button><button onClick={clear} aria-label="پاک کردن"><Eraser/></button>
       </div>
       {clusters.some(c=>c.matchedWord)&&<div className="recognized-ribbon">{clusters.filter(c=>c.matchedWord).map(c=><button key={c.id} onClick={()=>sound.speakPersian(c.matchedWord!.word)}><CheckCircle2/> {c.matchedWord!.word}</button>)}</div>}
-      {toast&&<div className="praise-toast" role="status"><span>{toast.imageEmoji}</span><div><b>آفرین! 👏</b><small>کلمه «{toast.word}» رو ساختی</small></div></div>}
+      {toast&&<div className="praise-toast" role="status"><WordPic value={toast.imageEmoji} /><div><b>آفرین! 👏</b><small>کلمه «{toast.word}» رو ساختی</small></div></div>}
       {wrongTashdid&&<div className="praise-toast mistake-toast" role="status"><span>🔁</span><div><b>دوباره تلاش کن</b><small>تشدید را دقیقاً بالای همان حرف بگذار</small></div></div>}
     </div>
 
@@ -258,7 +259,7 @@ export const MagneticBoard: React.FC<Props> = ({ onActivityComplete }) => {
       </div>}
     </footer>
     {trayPointer?.moved&&<span className="tray-drag-ghost" style={{left:trayPointer.x,top:trayPointer.y}}>{trayPointer.payload.type==='harakat'?kidGlyph(getHarakatById(trayPointer.payload.id)?.symbol || ''):kidGlyph(getLetterById(trayPointer.payload.id)?.isolated || '')}</span>}
-    {guided&&<div className="challenge-next"><span>{challenge.imageEmoji} کلمهٔ {toFa(challengeIndex + 1)} را بساز</span><button onClick={()=>{window.clearTimeout(autoTimer.current);setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
+    {guided&&<div className="challenge-next"><span>{emojiText(challenge.imageEmoji)} کلمهٔ {toFa(challengeIndex + 1)} را بساز</span><button onClick={()=>{window.clearTimeout(autoTimer.current);setChallengeIndex(i=>i+1);clear()}}>واژه بعدی</button></div>}
   </section>;
 };
 

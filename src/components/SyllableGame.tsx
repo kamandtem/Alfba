@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
 import { CurriculumLesson, bookLessonOf, kidDisplay } from '../data/curriculum';
-import { boardLessonWords, WORD_BANK } from '../data/wordBank';
+import { boardLessonWords, WORD_BANK, emojiText, hasRealEmoji } from '../data/wordBank';
+import { WordPic } from './shared/WordPic';
 import { lessonOfWord, plainWord } from '../utils/pieces';
 import { parseSyllables, ParsedWord, SoundCell, SOUND_ONLY_UNTIL_BOOK, SYLLABLE_EXCEPTION_WORDS, SYLLABLE_EXCLUDED_WORDS, SYLLABLE_WORDS } from '../utils/syllables';
 import { sound } from '../utils/audio';
@@ -18,7 +19,7 @@ import { FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D\u0640]/g, '');
 const emojiOf = (w: string) => WORD_BANK.find(e => e.plain === plainWord(w))?.emoji
-  || [18, 26, 30].flatMap(o => boardLessonWords(o)).find(e => e.plain === plainWord(w))?.emoji || '📖';
+  || [18, 26, 30].flatMap(o => boardLessonWords(o)).find(e => e.plain === plainWord(w))?.emoji || '';
 
 /** ۳ تا ۴ واژه برای درس انتخاب‌شده؛ فقط واژه‌هایی که همهٔ نشانه‌هایشان خوانده شده */
 export function syllableWordsFor(order: number): string[] {
@@ -60,17 +61,21 @@ const COMBINATION_CONSONANTS: CombinationConsonant[] = [
   { id: 'pe', lesson: 19, form: 'پـ', name: 'پ' },
 ];
 
+const ZWJ_C = '\u200D';
 const combinationText = (consonant: CombinationConsonant, vowel: CombinationVowel, form: string) => {
-  // شکل انتخاب‌شده را نگه می‌داریم: بـ + َ باید واقعاً «بـَ» بماند، نه «بَ».
-  const base = consonant.form;
-  if (vowel.id === 'aa') return `${base}ا`;
-  if (vowel.id === 'ou') return `${base}و`;
-  if (vowel.id === 'ey') return `${base}ی`;
-  if (vowel.id === 'e' && (form === 'ـه' || form === 'ه')) return `${base}ه`;
-  if (vowel.id === 'a') return `${base}َ`;
-  if (vowel.id === 'e') return `${base}ِ`;
-  if (vowel.id === 'o') return `${base}ُ`;
-  return `${base}${form}`;
+  // ترکیب با شکل پیوستهٔ خود فونت نوشته می‌شود (بدون کشیده): «با»، «بو»، «بی».
+  // برای اعراب، حرکت مستقیم روی خود حرف می‌نشیند و ZWJ بعد از آن می‌آید تا شکل آغازی بماند: «بَـ» نه «بـِ».
+  const c = consonant.name;
+  const joins = consonant.form.endsWith('ـ');
+  const withMark = (m: string) => joins ? `${c}${m}${ZWJ_C}` : `${c}${m}`;
+  if (vowel.id === 'aa') return `${c}ا`;
+  if (vowel.id === 'ou') return `${c}و`;
+  if (vowel.id === 'ey') return `${c}ی`;
+  if (vowel.id === 'e' && (form === 'ـه' || form === 'ه')) return `${c}ه`;
+  if (vowel.id === 'a') return withMark('\u064E');
+  if (vowel.id === 'e') return withMark('\u0650');
+  if (vowel.id === 'o') return withMark('\u064F');
+  return `${c}${form.replace(/ـ/g, '')}`;
 };
 
 type Chip = { id: string; cell: SoundCell; used: boolean };
@@ -82,11 +87,65 @@ const SelectableWord: React.FC<{
   parsed: ParsedWord;
   usedUnits: Set<number>;
   sel: { a: number; b: number } | null;
-  onUnitDown: (e: React.PointerEvent, unit: number) => void;
-}> = ({ parsed, usedUnits, sel, onUnitDown }) => {
+  /** تابعی که از روی مختصات افقی لمس، شمارهٔ هجای زیر انگشت را برمی‌گرداند */
+  zoneRef: React.MutableRefObject<((clientX: number) => number | null) | null>;
+}> = ({ parsed, usedUnits, sel, zoneRef }) => {
   const wrapRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [boxes, setBoxes] = useState<UnitBox[]>([]);
+  const [fontPx, setFontPx] = useState<number | null>(null);
+
+  /* کلمه تا جای ممکن بزرگ نوشته شود: عرض طبقهٔ اول را پر می‌کند (حداکثر ۲۰۰px) تا لمس راحت باشد */
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current, textEl = textRef.current;
+    const row = wrap?.parentElement;
+    if (!wrap || !textEl || !row) return;
+    let alive = true;
+    const fit = () => {
+      if (!alive) return;
+      const cs = getComputedStyle(row);
+      const avail = row.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 8;
+      const probe = 100;
+      const prev = textEl.style.fontSize;
+      textEl.style.fontSize = `${probe}px`;
+      const w = textEl.getBoundingClientRect().width;
+      textEl.style.fontSize = prev;
+      if (!w || avail <= 0) return;
+      const px = Math.max(64, Math.min(200, Math.floor(probe * avail * 0.94 / w)));
+      setFontPx(old => (old === px ? old : px));
+    };
+    fit();
+    try { document.fonts.load('100px "Tahriri"', parsed.word).then(fit).catch(() => undefined); } catch { /* ignore */ }
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    ro?.observe(row);
+    return () => { alive = false; ro?.disconnect(); };
+  }, [parsed]);
+
+  /* انتخاب خودکار هجا: کلمه به ناحیه‌های افقی تقسیم می‌شود (راست = هجای اول). مرز هر ناحیه وسطِ مرکز دو هجای کنار هم است.
+     اگر اندازه‌گیری حروف به‌خاطر ادغام حروف نامعتبر بود، کلمه به تعداد هجاها مساوی تقسیم می‌شود. */
+  zoneRef.current = (clientX: number) => {
+    const textEl = textRef.current, wrap = wrapRef.current;
+    const n = parsed.syllables.length;
+    if (!textEl || !wrap || !n) return null;
+    if (n === 1) return 0;
+    const base = wrap.getBoundingClientRect();
+    const tr = textEl.getBoundingClientRect();
+    const x = clientX - base.left;
+    let centers = parsed.syllables.map(sy => {
+      const bs = sy.units.map(u => boxes[parsed.units.findIndex(t => t.index === u)]).filter(Boolean) as UnitBox[];
+      if (!bs.length) return NaN;
+      const l = Math.min(...bs.map(b => b.left)), r = Math.max(...bs.map(b => b.left + b.width));
+      return (l + r) / 2;
+    });
+    const ok = centers.every((c, i) => Number.isFinite(c) && (i === 0 || c < centers[i - 1] - 6));
+    if (!ok) {
+      const left = tr.left - base.left, w = tr.width / n;
+      centers = parsed.syllables.map((_, i) => left + tr.width - w * (i + 0.5));
+    }
+    let best = 0;
+    centers.forEach((c, i) => { if (Math.abs(x - c) < Math.abs(x - centers[best])) best = i; });
+    return best;
+  };
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current, textEl = textRef.current;
@@ -122,18 +181,17 @@ const SelectableWord: React.FC<{
     if (observer) observer.observe(wrap);
     window.addEventListener('resize', measure);
     return () => { alive = false; observer?.disconnect(); window.removeEventListener('resize', measure); };
-  }, [parsed]);
+  }, [parsed, fontPx]);
 
-  return <span ref={wrapRef} className="syl-word-select" dir="rtl">
+  return <span ref={wrapRef} className="syl-word-select" dir="rtl" style={fontPx ? { fontSize: fontPx } : undefined}>
     <span ref={textRef} className="syl-word-visible tahriri">{parsed.word}</span>
     {boxes.map((box, i) => {
       const unit = parsed.units[i];
       if (!unit) return null;
       const used = usedUnits.has(unit.index);
-      return <button key={unit.index} type="button" data-unit={unit.index} disabled={used}
+      return <span key={unit.index} aria-hidden="true"
         className={`syl-unit-hit ${used ? 'used' : ''} ${sel && unit.index >= sel.a && unit.index <= sel.b ? 'sel' : ''}`}
-        style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
-        onPointerDown={e => onUnitDown(e, unit.index)} aria-label={`انتخاب بخش ${unit.cells.map(c => c.text).join('')}`} />;
+        style={{ left: box.left, top: box.top, width: box.width, height: box.height, pointerEvents: 'none' }} />;
     })}
   </span>;
 };
@@ -163,6 +221,7 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
   const [fb, setFb] = useState<FeedbackState>(null);
   const [drag, setDrag] = useState<Drag>(null);
   const swipe = useRef<{ anchor: number } | null>(null);
+  const zoneRef = useRef<((clientX: number) => number | null) | null>(null);
   const timer = useRef(0);
   const usedUnits = useMemo(() => { const s = new Set<number>(); parsed.syllables.forEach((sy, k) => { if (sylDone[k]) sy.units.forEach(u => s.add(u)); }); return s; }, [parsed, sylDone]);
 
@@ -212,40 +271,48 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
   const finishWord = () => {
     setStage(3); sound.playSuccess(); const p = praise();
     const last = (idx % words.length) === words.length - 1;
-    setFb({ tone: 'good', text: last ? `${p} همهٔ کلمه‌های این درس را ${soundOnly ? 'صدا به صدا جدا کردی' : 'بخش‌بخش کردی'}!` : `${p} «${speakable(word)}» را درست ${soundOnly ? 'جدا کردی' : 'بخش کردی'}.`, emoji: emojiOf(word) || '🌟' });
+    setFb({ tone: 'good', text: last ? `${p} همهٔ کلمه‌های این درس را ${soundOnly ? 'صدا به صدا جدا کردی' : 'بخش‌بخش کردی'}!` : `${p} «${speakable(word)}» را درست ${soundOnly ? 'جدا کردی' : 'بخش کردی'}.`, emoji: emojiText(emojiOf(word), '🌟') });
     sound.speakPersian(p); onDone();
     timer.current = window.setTimeout(goNext, 2000); // خودکار ← کلمهٔ بعد
   };
 
   /* ---------------- طبقهٔ اول ← دوم: انتخاب چند حرف و گذاشتن در خانهٔ بخش ---------------- */
   const rangeFree = (a: number, b: number) => { for (let u = Math.min(a, b); u <= Math.max(a, b); u++) if (usedUnits.has(u)) return false; return true; };
-  const unitAt = (x: number, y: number) => { const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-unit]') as HTMLElement | null; return el ? Number(el.dataset.unit) : null; };
+  const sylRange = (k: number) => { const u = parsed.syllables[k].units; return { a: Math.min(...u), b: Math.max(...u) }; };
+  /** هجای زیر انگشت؛ اگر آن هجا قبلاً در جدول گذاشته شده، نزدیک‌ترین هجای آزاد */
+  const sylAt = (x: number) => {
+    const k = zoneRef.current?.(x); if (k == null) return null;
+    if (!sylDone[k]) return k;
+    let best: number | null = null;
+    parsed.syllables.forEach((_, i) => { if (!sylDone[i] && (best === null || Math.abs(i - k) < Math.abs(best - k))) best = i; });
+    return best;
+  };
   const dropAt = (x: number, y: number) => (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-drop]') as HTMLElement | null;
 
-  const unitDown = (e: React.PointerEvent, u: number) => {
-    if (stage !== 1 || usedUnits.has(u)) return;
+  /* لمس هر جای طبقهٔ اول: هجای همان ناحیه خودکار انتخاب می‌شود (اول/وسط/آخر کلمه) */
+  const rowDown = (e: React.PointerEvent) => {
+    if (stage !== 1) return;
+    const k = sylAt(e.clientX); if (k === null) return;
     e.preventDefault();
-    if (sel && u >= sel.a && u <= sel.b) { // کشیدن گروه انتخاب‌شده به سمت طبقهٔ دوم
+    const { a, b } = sylRange(k);
+    if (sel && a >= sel.a && b <= sel.b) { // کشیدن گروه انتخاب‌شده به سمت طبقهٔ دوم
       setDrag({ kind: 'sel', x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, label: parsed.units.slice(sel.a, sel.b + 1).map(x => x.glyph).join('') });
       return;
     }
     sound.playPop();
-    // با یک لمس روی هر صدای هجا، کل همان هجا انتخاب می‌شود.
-    // این جلوی گیرکردن واژه‌هایی مثل «اُردَک» را می‌گیرد: «اُر» یک‌جا انتخاب می‌شود.
-    const syllable = parsed.syllables.find(s => s.units.includes(u));
-    if (syllable) {
-      const a = Math.min(...syllable.units), b = Math.max(...syllable.units);
-      if (rangeFree(a, b)) { setSel({ a, b }); swipe.current = { anchor: u }; return; }
-    }
-    setSel({ a: u, b: u }); swipe.current = { anchor: u };
+    setSel({ a, b }); swipe.current = { anchor: k };
   };
   useEffect(() => {
     if (stage !== 1) return;
     const move = (e: PointerEvent) => {
       if (!swipe.current) return;
-      const v = unitAt(e.clientX, e.clientY); const a = swipe.current.anchor;
-      if (v === null || usedUnits.has(v) || !rangeFree(a, v)) return;
-      setSel(s => { const n = { a: Math.min(a, v), b: Math.max(a, v) }; if (s && s.a === n.a && s.b === n.b) return s; sound.playPop(); return n; });
+      // کشیدن انگشت روی کلمه: هجاهای بعدی/قبلی هم به انتخاب اضافه می‌شوند (کامل، نه حرف‌به‌حرف)
+      const k = zoneRef.current?.(e.clientX); const k0 = swipe.current.anchor;
+      if (k == null) return;
+      const r0 = sylRange(Math.min(k, k0)), r1 = sylRange(Math.max(k, k0));
+      const n = { a: r0.a, b: r1.b };
+      if (!rangeFree(n.a, n.b)) return;
+      setSel(s => { if (s && s.a === n.a && s.b === n.b) return s; sound.playPop(); return n; });
     };
     const up = () => { swipe.current = null; };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
@@ -363,15 +430,15 @@ export const SyllableGame: React.FC<{ lesson: CurriculumLesson; onDone: () => vo
       </div>
       {!combinationConsonants.length && <p className="combination-empty">با خواندن درس «بـ ب»، صامت‌ها یکی‌یکی اینجا اضافه می‌شوند.</p>}
     </section> : soundOnly ? <section className="syl-sounds">
-      <div className="syl-word-card"><span className="syl-emoji">{emojiOf(word)}</span><b className="tahriri" onClick={() => sound.speakPersian(speakable(word))}>{word}</b></div>
+      <div className="syl-word-card"><WordPic className="syl-emoji" value={emojiOf(word)} /><b className="tahriri" onClick={() => sound.speakPersian(speakable(word))}>{word}</b></div>
       <div className="syl-tray" aria-label="صداهای درهم">{chips.map(c => <button key={c.id} className={`syl-chip tahriri ${c.used ? 'used' : ''} ${picked === c.id ? 'picked' : ''} ${c.cell.mark ? 'is-mark' : ''}`} onPointerDown={e => chipDown(e, c)} disabled={c.used}>{c.cell.glyph}</button>)}</div>
       <div className="syl-circles">{parsed.cells.map((c, j) => cellView(c, j, 'circle'))}</div>
     </section> :
     <section className="syl-table" style={{ gridTemplateColumns: `repeat(${N}, minmax(0, 1fr))` }} aria-label="جدول بخش‌ها">
       {/* طبقهٔ اول: خود کلمه، حرف‌ها لمسی */}
-      <div className={`syl-row1 ${stage === 1 ? 'active' : ''}`} style={{ gridColumn: `1 / span ${N}` }}>
-        {emojiOf(word) && <span className="syl-emoji small">{emojiOf(word)}</span>}
-        <SelectableWord parsed={parsed} usedUnits={usedUnits} sel={sel} onUnitDown={unitDown} />
+      <div className={`syl-row1 ${stage === 1 ? 'active' : ''}`} style={{ gridColumn: `1 / span ${N}`, touchAction: 'none' }} onPointerDown={rowDown}>
+        {hasRealEmoji(emojiOf(word)) && <span className="syl-emoji small">{emojiOf(word)}</span>}
+        <SelectableWord parsed={parsed} usedUnits={usedUnits} sel={sel} zoneRef={zoneRef} />
       </div>
       {/* طبقهٔ دوم: خانه‌های بخش (به تعداد هجاها) */}
       {parsed.syllables.map((s, k) => <div key={`s${k}`} data-drop={`syl:${k}`} onClick={() => placeSyllable(k)} style={{ gridColumn: `span ${s.cells.length}` }}

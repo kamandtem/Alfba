@@ -20,7 +20,10 @@ export const G = {
  * این‌ها glyph خود فونت تحریری‌اند: بـ و نـ با نقطهٔ کتابی، تـ دونقطه، مـ گردِ روی خط و هـ دوچشم؛ دقیقاً به سبک کتاب نگارش اول.
  * اگر روزی خواستید به حالت قبل برگردید، کافی است KID_INIT را خالی کنید.
  */
-export const KID_INIT: Record<string, string> = { 'ب': '\uE101', 'ن': '\uE102', 'م': '\uE103', 'ه': '\uE104', 'ت': '\uE105' };
+/* «بـ نـ تـ» با شکل آغازیِ خود فونت نمایش داده می‌شوند (glyph کشیدهٔ اختصاصی حذف شد). */
+export const KID_INIT: Record<string, string> = { 'م': '\uE103', 'ه': '\uE104' };
+/** حروفی که شکل آغازی‌شان باید دقیقاً glyph خود فونت باشد، بدون کشیده */
+const FONT_INIT = new Set(['ب', 'ن', 'ت']);
 const CONNECTOR = new Set([ZWJ, '\u0640']);
 /** شکل نمایشی یک قطعهٔ تک (مثل «مـ» یا «هـ») با glyph کودکانهٔ کتاب؛ فقط برای نمایش، نه برای ساختن متن کلمه */
 /** شکل میانی و آخرِ کتابیِ «ه» (صفحهٔ ۹۱ کتاب): ـهـ قلاب رو به پایین، ـه برآمدگی کوچک. فقط برای قطعه‌های تک؛ در کلمهٔ وصل‌شده همان فونت. */
@@ -31,6 +34,10 @@ export const kidGlyph = (g: string) => {
   if (KID_FORMS[normalized]) return KID_FORMS[normalized];
   const init = normalized.match(/^([بنمهت])\u200D([\u064B-\u0652\u0670اوی]*)$/);
   if (init && KID_INIT[init[1]]) return KID_INIT[init[1]] + init[2];
+  // اعراب باید روی خود حرف بنشیند؛ اگر بعد از ZWJ بیاید فونت آن را پایینِ حرف می‌اندازد (بَ → بِ)
+  if (init && FONT_INIT.has(init[1])) return init[2] ? init[1] + init[2] + ZWJ : normalized;
+  const markFirst = normalized.match(/^([بنمهت])([\u064B-\u0652\u0670]+)\u200D$/);
+  if (markFirst && KID_INIT[markFirst[1]]) return KID_INIT[markFirst[1]] + markFirst[2];
   return g;
 };
 /** جایگزینی امن برای همهٔ نمایش‌های مستقل نشانه‌ها؛ متن واژه‌ها دست‌نخورده می‌ماند. */

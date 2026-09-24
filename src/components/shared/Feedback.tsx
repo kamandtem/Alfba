@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { WordPic } from './WordPic';
 
 export type FeedbackState = { tone: 'good' | 'try' | 'info'; text: string; emoji?: string } | null;
 
@@ -26,7 +27,7 @@ export const FeedbackToast: React.FC<{ state: FeedbackState; onClose: () => void
   return <div className="kid-toast-layer" aria-live="polite">
     <div className={`kid-toast ${state.tone} ${leaving ? 'leaving' : ''}`} role="status" onClick={onClose}>
       {state.tone === 'good' && <span className="kid-toast-confetti" aria-hidden="true"><i /><i /><i /><i /><i /><i /></span>}
-      <span className="kid-toast-emoji">{emoji}</span>
+      <span className="kid-toast-emoji"><WordPic value={emoji} /></span>
       <p>{state.text}</p>
     </div>
   </div>;

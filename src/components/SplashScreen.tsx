@@ -44,7 +44,6 @@ export const SplashScreen: React.FC<SplashProps> = ({ onStart, onContinue, onPro
     <img className="start-background" src="/assets/start-children.png" alt="" draggable={false} />
     <div className="start-brand" aria-label="دهکده الفبا">
       <img className="start-sign" src="/assets/start-sign.svg" alt="" draggable={false} />
-      <strong>دهکده الفبا</strong>
     </div>
 
     {/* نوار سفید موج‌دار پایین با سه دکمه، دقیقاً مثل تصویر مرجع */}

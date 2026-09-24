@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Eraser, Flag, RefreshCw, Undo2, Volume2 } from 'lucide-react';
 import { CURRICULUM, kidGlyph, LETTER_BOX } from '../data/curriculum';
-import { boardLessonWords, boardSuggestWords, dictationWords, DictationItem, findWord, WORD_PLACEHOLDER, WordEntry } from '../data/wordBank';
+import { boardLessonWords, boardSuggestWords, dictationWords, DictationItem, findWord, WordEntry, emojiText } from '../data/wordBank';
+import { WordPic } from './shared/WordPic';
 import { finishProblem, parseToken, plainSequence, renderSequence, tashdidProfile, validateSequence } from '../utils/pieces';
 import { sound } from '../utils/audio';
 import { shuffle, toFa, useCurrentLesson } from '../utils/lessonState';
@@ -27,11 +28,7 @@ type Drag =
 const uid = () => Math.random().toString(36).slice(2, 9);
 const speakable = (s: string) => s.replace(/[\u064B-\u0652\u200D]/g, '');
 const REVEAL_PIECES = 5;
-const WordVisual: React.FC<{ value?: string }> = ({ value }) => (
-  value === WORD_PLACEHOLDER || !value
-    ? <img className="word-placeholder-icon" src="/assets/word-placeholder.svg" alt="نماد واژه" draggable={false} />
-    : <span aria-hidden="true">{value}</span>
-);
+const WordVisual = WordPic;
 
 export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word', id?: string) => void; stars: number; onProgress?: () => void }> = ({ onBack: leave, onComplete: record, stars }) => {
   const [session, setSession] = useState(sessionPoints);
@@ -190,7 +187,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     if (token === ans) {
       setDictFilled(true); setSolved(true); sound.playSnap();
       window.setTimeout(() => sound.playSuccess(), 120);
-      say('good', `${praise()} موفق شدی!`, dictItem.entry.emoji || '🎉');
+      say('good', `${praise()} موفق شدی!`, emojiText(dictItem.entry.emoji, '🎉'));
       onComplete('word', dictItem.entry.id);
       const m0 = modeRef.current;
       window.clearTimeout(autoTimer.current); autoTimer.current = window.setTimeout(() => { if (modeRef.current === m0) next(); }, 2400);
@@ -257,7 +254,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     if (mode === 'free') {
       const known = findWord(plain);
       setWords(ws => ws.map(o => o.id === w.id ? { ...o, closed: true, status: 'good' } : o));
-      if (known) { sound.playSuccess(); say('good', `${praise()} کلمهٔ «${plain}» را نوشتی.`, known.emoji || '🎉'); onComplete('word', known.id); }
+      if (known) { sound.playSuccess(); say('good', `${praise()} کلمهٔ «${plain}» را نوشتی.`, emojiText(known.emoji, '🎉')); onComplete('word', known.id); }
       else say('info', `کلمه‌ات تمام شد: «${plain}». آن را بلند بخوان!`, '📝');
       return;
     }
@@ -267,7 +264,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     const actualTashdid = tashdidProfile(defs);
     if (plain === target.plain && (!expectedTashdid || expectedTashdid === actualTashdid)) {
       setWords(ws => ws.map(o => o.id === w.id ? { ...o, closed: true, status: 'good' } : o)); setSolved(true);
-      sound.playSuccess(); say('good', `${praise()} «${target.plain}» را درست ساختی.`, target.emoji || '🎉'); onComplete('word', target.id);
+      sound.playSuccess(); say('good', `${praise()} «${target.plain}» را درست ساختی.`, emojiText(target.emoji, '🎉')); onComplete('word', target.id);
       // خودکار ← کلمهٔ بعدی (کلمه‌های درس و پیشنهاد کلمه)
       window.clearTimeout(autoTimer.current); autoTimer.current = window.setTimeout(() => { if (modeRef.current === m0) next(); }, 2200);
     } else {
