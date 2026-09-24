@@ -253,3 +253,24 @@ img{-webkit-user-drag:none}
 .combination-clear svg{width:18px}
 .combination-clear:disabled{opacity:.45;cursor:default}
 @media (max-width:520px){.syl-row1{min-height:84px}.syl-slot{min-height:80px}.syl-cell{min-height:64px}.syl-table{gap:4px;padding:6px}.syl-row1,.syl-slot,.syl-cell{border-width:2px;border-radius:11px}}
+
+/* ===== نسخهٔ ۱۱: پیام پایان دور (به‌جای حلقهٔ بی‌پایان) ===== */
+.round-done-backdrop{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:18px;background:rgba(20,32,56,.45);animation:roundFade .2s ease-out both}
+.round-done-card{position:relative;display:grid;justify-items:center;gap:8px;width:min(420px,92vw);padding:26px 22px 22px;border:5px solid #fff;border-radius:34px;background:linear-gradient(180deg,#FFF6CF,#FFE38A);color:#6b4300;text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.12),0 24px 50px rgba(20,40,70,.35);font-family:var(--ui-font);animation:roundPop .45s cubic-bezier(.34,1.56,.64,1) both;overflow:hidden}
+.round-done-trophy{font-size:72px;line-height:1;animation:roundBounce 1.4s ease-in-out infinite}
+.round-done-card h2{margin:4px 0 0;font-size:1.7rem;font-weight:1000;color:#b45309}
+.round-done-card p{margin:0;font-weight:800;line-height:1.7;color:#7a5410}
+.round-done-stars{font-size:1.9rem;letter-spacing:.2em}
+.round-done-again{display:inline-flex;align-items:center;gap:8px;min-height:52px;margin-top:6px;padding:10px 22px;border:0;border-radius:18px;background:#34BD63;color:#fff;font-weight:1000;font-size:1.05rem;box-shadow:0 5px 0 #1f8a44}
+.round-done-again svg{width:20px}
+.round-done-again:active{transform:translateY(3px);box-shadow:0 2px 0 #1f8a44}
+.round-done-confetti{position:absolute;inset:0;pointer-events:none}
+.round-done-confetti i{position:absolute;top:-12px;width:10px;height:16px;border-radius:3px;background:#ef5b5b;animation:roundConfetti 2.2s linear infinite}
+.round-done-confetti i:nth-child(1){left:8%;animation-delay:0s}.round-done-confetti i:nth-child(2){left:20%;background:#5b7cfa;animation-delay:.4s}
+.round-done-confetti i:nth-child(3){left:33%;background:#34BD63;animation-delay:.9s}.round-done-confetti i:nth-child(4){left:47%;background:#ffb020;animation-delay:.2s}
+.round-done-confetti i:nth-child(5){left:60%;background:#e84393;animation-delay:1.2s}.round-done-confetti i:nth-child(6){left:72%;background:#5b7cfa;animation-delay:.6s}
+.round-done-confetti i:nth-child(7){left:84%;background:#34BD63;animation-delay:1.5s}.round-done-confetti i:nth-child(8){left:93%;background:#ef5b5b;animation-delay:1s}
+@keyframes roundFade{from{opacity:0}to{opacity:1}}
+@keyframes roundPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+@keyframes roundBounce{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+@keyframes roundConfetti{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(520px) rotate(540deg)}}

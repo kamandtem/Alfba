@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { sound, type AudioSettings } from '../utils/audio';
+import { sound, type AudioSettings, DEFAULT_MUSIC } from '../utils/audio';
 
 const UI = '/assets/ui/settings';
 
@@ -47,7 +47,7 @@ const VolumeSlider: React.FC<{ value: number; onChange: (v: number) => void; onR
 export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [s, setS] = useState<AudioSettings>(() => sound.getSettings());
   const initial = useRef<AudioSettings>(sound.getSettings());
-  const lastOn = useRef({ sfx: s.sfx || 0.8, music: s.music || 0.6 });
+  const lastOn = useRef({ sfx: s.sfx || 0.8, music: s.music || DEFAULT_MUSIC });
 
   useEffect(() => sound.subscribe(setS), []);
   useEffect(() => { if (s.sfx > 0) lastOn.current.sfx = s.sfx; if (s.music > 0) lastOn.current.music = s.music; }, [s]);

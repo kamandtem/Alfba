@@ -14,6 +14,8 @@ import { setStatusBarColor, vibrate } from '../utils/native';
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 import { CloseArt, OkArt } from './shared/ArtButtons';
 import { SyllableGame } from './SyllableGame';
+import { RoundComplete } from './shared/RoundComplete';
+import { SignText } from './shared/SignText';
 
 type Place = { left: number; top: number; w: number; ratio: number; bb: [number, number, number, number] };
 const HR = 258 / 246;
@@ -67,7 +69,7 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
       <div className="map-title-ribbon coral"><small>دهکدهٔ اول</small><strong>آشنایی با حروف</strong></div>
       <button className="map-svg-button" onClick={() => { sound.playPop(); setHelpOpen(true); }} aria-label="راهنما"><img src="/assets/letters-help.svg" alt="راهنما" /></button>
     </header>
-    <button className="lesson-chip" onClick={() => { sound.playPop(); setLessonsOpen(true); }}><span>نشانهٔ امروز</span><b className="tahriri">{kidDisplay(lesson.sign)}</b><small>درس {toFa(lessonOrder)}</small></button>
+    <button className="lesson-chip" onClick={() => { sound.playPop(); setLessonsOpen(true); }}><span>نشانهٔ امروز</span><b className="tahriri"><SignText text={lesson.sign} /></b><small>درس {toFa(lessonOrder)}</small></button>
     <LessonSheet open={lessonsOpen} onClose={() => setLessonsOpen(false)} />
     {helpOpen && <div className="letters-help-backdrop" onClick={() => setHelpOpen(false)}><section className="letters-help-panel" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
       <CloseArt className="letters-help-close" onClick={() => setHelpOpen(false)} />
@@ -152,6 +154,7 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
   const [meter, setMeter] = useState(0);
   const [solved, setSolved] = useState(false);
   const [traceRun, setTraceRun] = useState(1);
+  const [roundDone, setRoundDone] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const guideRef = useRef<HTMLCanvasElement>(null);
   const inkRef = useRef<HTMLCanvasElement>(null);
@@ -253,8 +256,16 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     sound.speakPersian(p);
     setFb({ tone: 'good', text: `${p} خیلی خوب کشیدی.` });
     onDone();
-    window.setTimeout(() => { setTraceRun(1); setIndex(i => (i + 1) % items.length); }, 1500);
+    // آخرین مورد: پیام «موفق شدی»، نه برگشتِ بی‌خبر به مورد اول
+    const last = index % items.length === items.length - 1;
+    window.setTimeout(() => { if (last) setRoundDone(true); else { setTraceRun(1); setIndex(i => (i + 1) % items.length); } }, 1500);
   };
+  const traceNext = () => {
+    clear(); setTraceRun(1);
+    if (index % items.length === items.length - 1) setRoundDone(true);
+    else setIndex(i => (i + 1) % items.length);
+  };
+  const traceAgain = () => { setRoundDone(false); setTraceRun(1); if (index === 0) drawGuide(); else setIndex(0); };
 
   const up = () => {
     if (!drawing.current) return; drawing.current = false;
@@ -293,9 +304,10 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
     <div className="trace-actions">
       <button className="soft-btn" onClick={clear}><Eraser /> پاک کن</button>
       <OkArt className="trace-ok" ready={meter >= 1 && !solved} onClick={finish} label="انجام دادم" caption="انجام دادم" />
-      <button className="soft-btn" onClick={() => { clear(); setTraceRun(1); setIndex(i => (i + 1) % items.length); }}>بعدی <ChevronLeft /></button>
+      <button className="soft-btn" onClick={traceNext}>بعدی <ChevronLeft /></button>
     </div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
+    <RoundComplete open={roundDone} text={`همهٔ ${toFa(items.length)} تمرین این درس را کشیدی.`} onAgain={traceAgain} />
   </div>;
 };
 
@@ -303,6 +315,9 @@ const LetterTrace: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = 
 /* تمرین ۲: پیدا کردن حرف در میان حروف خاکستری درهم */
 const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ lesson, onDone }) => {
   const [round, setRound] = useState(0);
+  const [roundDone, setRoundDone] = useState(false);
+  /** هر دور بازی: به تعداد شکل‌های نشانه (حداقل ۳ مرحله)؛ بعد پیام «موفق شدی» */
+  const ROUNDS = Math.max(3, lesson.forms.length);
   const target = lesson.forms[round % lesson.forms.length];
   const cells = useMemo(() => {
     const targetCount = 4 + Math.floor(Math.random() * 3);
@@ -327,7 +342,7 @@ const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = (
     if (found.includes(c.id)) return;
     if (c.isTarget) {
       const n = [...found, c.id]; setFound(n); sound.playPop();
-      if (n.length === total) { sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} همه را پیدا کردی.` }); onDone(); autoNext(() => setRound(r => r + 1)); }
+      if (n.length === total) { sound.playSuccess(); const p = praise(); sound.speakPersian(p); setFb({ tone: 'good', text: `${p} همه را پیدا کردی.` }); onDone(); autoNext(() => { if (round + 1 >= ROUNDS) setRoundDone(true); else setRound(r => r + 1); }); }
     } else { setWrong(c.id); sound.speakPersian('این نیست'); window.setTimeout(() => setWrong(null), 600); }
   };
 
@@ -340,8 +355,9 @@ const LetterHunt: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = (
     <div className="hunt-field" aria-label="حروف درهم">
       {cells.map(c => <button key={c.id} className={`hunt-glyph tahriri ${found.includes(c.id) ? 'found' : ''} ${wrong === c.id ? 'wrong' : ''}`} style={{ transform: `translate(${c.dx}%, ${c.dy}%) rotate(${c.rot}deg) scale(${c.scale})` }} onClick={() => tap(c)}>{kidDisplay(c.g)}</button>)}
     </div>
-    <div className="hunt-footer"><span>{toFa(found.length)} از {toFa(total)} پیدا شد</span><button className="soft-btn" onClick={() => { autoNext.cancel(); setRound(r => r + 1); }}><RefreshCw /> دور بعد</button></div>
+    <div className="hunt-footer"><span>{toFa(found.length)} از {toFa(total)} پیدا شد · مرحلهٔ {toFa(round + 1)} از {toFa(ROUNDS)}</span><button className="soft-btn" onClick={() => { autoNext.cancel(); if (round + 1 >= ROUNDS) setRoundDone(true); else setRound(r => r + 1); }}><RefreshCw /> دور بعد</button></div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
+    <RoundComplete open={roundDone} text={`هر ${toFa(ROUNDS)} مرحلهٔ «پیدا کن» را تمام کردی.`} onAgain={() => { setRoundDone(false); setRound(0); }} />
   </div>;
 };
 
@@ -379,8 +395,10 @@ const lessonPictureWords = (order: number): LikeWord[] => {
   return out.sort((a, b) => [...a.word].length - [...b.word].length);
 };
 
+const LIKE_ROUNDS = 3;
 const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ lesson, onDone }) => {
   const [round, setRound] = useState(0);
+  const [roundDone, setRoundDone] = useState(false);
   const bookWords = useMemo(() => lessonPictureWords(lesson.order), [lesson.order]);
   const options = useMemo(() => {
     const correctPool = shuffle(bookWords.filter(w => hasSign(lesson, w.word)));
@@ -401,7 +419,7 @@ const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ 
     sound.speakPersian(o.word.replace(/[\u064B-\u0652]/g, ''));
     if (o.ok) {
       const n = [...picked, o.word]; setPicked(n); sound.playPop();
-      if (n.length === need) { sound.playSuccess(); const p = praise(); setFb({ tone: 'good', text: `${p} همهٔ کلمه‌های «${kidDisplay(lesson.sign)}» را پیدا کردی.` }); onDone(); autoNext(() => setRound(r => r + 1)); }
+      if (n.length === need) { sound.playSuccess(); const p = praise(); setFb({ tone: 'good', text: `${p} همهٔ کلمه‌های «${kidDisplay(lesson.sign)}» را پیدا کردی.` }); onDone(); autoNext(() => { if (round + 1 >= LIKE_ROUNDS) setRoundDone(true); else setRound(r => r + 1); }); }
     } else { setShake(o.word); setFb({ tone: 'try', text: `«${o.word}» صدای «${kidDisplay(lesson.sign)}» ندارد. ${cheer()}` }); window.setTimeout(() => setShake(null), 650); }
   };
 
@@ -413,8 +431,9 @@ const LikeWhat: React.FC<{ lesson: CurriculumLesson; onDone: () => void }> = ({ 
         <span className="like-emoji">{o.emoji}</span><b className="tahriri">{o.word}</b>{picked.includes(o.word) && <i><Check /></i>}
       </button>)}
     </div>
-    <div className="hunt-footer"><span /><button className="soft-btn" onClick={() => { autoNext.cancel(); setRound(r => r + 1); }}><RefreshCw /> کلمه‌های تازه</button></div>
+    <div className="hunt-footer"><span>مرحلهٔ {toFa(round + 1)} از {toFa(LIKE_ROUNDS)}</span><button className="soft-btn" onClick={() => { autoNext.cancel(); if (round + 1 >= LIKE_ROUNDS) setRoundDone(true); else setRound(r => r + 1); }}><RefreshCw /> کلمه‌های تازه</button></div>
     <FeedbackToast state={fb} onClose={() => setFb(null)} />
+    <RoundComplete open={roundDone} text={`هر ${toFa(LIKE_ROUNDS)} مرحلهٔ «چی مثلِ چی» را درست جواب دادی.`} onAgain={() => { setRoundDone(false); setRound(0); }} />
   </div>;
 };
 
@@ -427,9 +446,17 @@ const FlashCards: React.FC<{ lesson: CurriculumLesson }> = ({ lesson }) => {
   }, [lesson]);
   const [i, setI] = useState(0);
   const [flip, setFlip] = useState(false);
+  const [roundDone, setRoundDone] = useState(false);
+  const iRef = useRef(0); iRef.current = i;
   const card = cards[i % cards.length];
   const autoNext = useAutoNext();
-  const go = (d: number) => { autoNext.cancel(); setFlip(false); window.setTimeout(() => setI(x => (x + d + cards.length) % cards.length), 180); sound.playPop(); };
+  // بعد از کارتِ آخر (مثلاً ۵ از ۵) پیام تبریک می‌آید، نه برگشتِ بی‌خبر به کارت ۱
+  const go = (d: number) => {
+    autoNext.cancel(); setFlip(false); sound.playPop();
+    if (d > 0 && iRef.current % cards.length === cards.length - 1) { window.setTimeout(() => setRoundDone(true), 180); return; }
+    if (d < 0 && iRef.current % cards.length === 0) return;
+    window.setTimeout(() => setI(x => (x + d + cards.length) % cards.length), 180);
+  };
   // بعد از دیدن جواب (پشت کارت)، خودکار کارت بعدی می‌آید
   const toggle = () => { const toBack = !flip; setFlip(toBack); if (toBack) { sound.speakPersian(card.word.replace(/[\u064B-\u0652]/g, '')); autoNext(() => go(1), 2600); } else { autoNext.cancel(); sound.speakPersian(`${lesson.spoken} مثلِ؟`); } };
   return <div className="mini-game flash-game">
@@ -438,9 +465,10 @@ const FlashCards: React.FC<{ lesson: CurriculumLesson }> = ({ lesson }) => {
       <div className="flash-face back"><span className="flash-emoji">{card.emoji}</span><b className="tahriri">{card.word}</b><small className="tahriri"><FormRun forms={lesson.forms} /> مثلِ {card.word}</small></div>
     </div>
     <div className="flash-nav">
-      <button className="soft-btn" onClick={() => go(-1)}><ChevronRight /> قبلی</button>
+      <button className="soft-btn" onClick={() => go(-1)} disabled={i % cards.length === 0}><ChevronRight /> قبلی</button>
       <span>{toFa(i % cards.length + 1)} / {toFa(cards.length)}</span>
       <button className="soft-btn" onClick={() => go(1)}>بعدی <ChevronLeft /></button>
     </div>
+    <RoundComplete open={roundDone} text={`همهٔ ${toFa(cards.length)} فلش‌کارت این درس را دیدی.`} onAgain={() => { setRoundDone(false); setFlip(false); setI(0); }} />
   </div>;
 };

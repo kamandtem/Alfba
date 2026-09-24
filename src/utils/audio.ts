@@ -10,6 +10,8 @@ const AUDIO_KEY = 'alefba_audio_v1';
 /** سقف صدای موسیقی پس‌زمینه: عمداً خیلی پایین تا حواس کودک پرت نشود */
 const MUSIC_MAX = 0.16;
 const MUSIC_SRC = '/assets/audio/lullaby.mp3';
+/** بلندی پیش‌فرض موسیقی در نصب تازه: پایین؛ اگر کودک/والد خواست از تنظیمات بلندترش می‌کند */
+export const DEFAULT_MUSIC = 0.3;
 
 export interface AudioSettings { sfx: number; music: number; }
 type Listener = (s: AudioSettings) => void;
@@ -18,16 +20,16 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 
 const readSettings = (): AudioSettings => {
   try {
     const raw = JSON.parse(localStorage.getItem(AUDIO_KEY) || 'null');
-    if (raw && typeof raw === 'object') return { sfx: clamp01(raw.sfx ?? 0.8), music: clamp01(raw.music ?? 0.6) };
+    if (raw && typeof raw === 'object') return { sfx: clamp01(raw.sfx ?? 0.8), music: clamp01(raw.music ?? DEFAULT_MUSIC) };
   } catch { /* ignore */ }
-  return { sfx: 0.8, music: 0.6 };
+  return { sfx: 0.8, music: DEFAULT_MUSIC };
 };
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private sfxBus: GainNode | null = null;
-  private settings: AudioSettings = typeof window !== 'undefined' ? readSettings() : { sfx: 0.8, music: 0.6 };
+  private settings: AudioSettings = typeof window !== 'undefined' ? readSettings() : { sfx: 0.8, music: DEFAULT_MUSIC };
   private musicEl: HTMLAudioElement | null = null;
   private musicWanted = false;
   private ducked = false;
@@ -74,8 +76,9 @@ class SoundEngine {
     this.musicEl.volume = muted ? 0 : Math.min(1, this.settings.music * MUSIC_MAX * (this.ducked ? 0.35 : 1));
   }
   /** بعد از اولین لمس کودک صدا زده می‌شود (مرورگرها پخش خودکار را قبل از لمس اجازه نمی‌دهند) */
-  public startMusic() {
-    if (typeof window === 'undefined') return;
+  public isMusicPlaying(): boolean { return !!this.musicEl && !this.musicEl.paused; }
+  public startMusic(): Promise<boolean> {
+    if (typeof window === 'undefined') return Promise.resolve(false);
     this.musicWanted = true;
     if (!this.musicEl) {
       this.musicEl = new Audio(MUSIC_SRC);
@@ -83,8 +86,12 @@ class SoundEngine {
       this.musicEl.preload = 'auto';
     }
     this.applyMusicVolume();
-    if (this.settings.music <= 0 || this.isMuted || document.hidden) return;
-    if (this.musicEl.paused) this.musicEl.play().catch(() => { /* هنوز لمسی نشده */ });
+    if (this.settings.music <= 0 || this.isMuted || document.hidden) return Promise.resolve(false);
+    if (!this.musicEl.paused) return Promise.resolve(true);
+    try {
+      const p = this.musicEl.play();
+      return (p ? p.then(() => true) : Promise.resolve(!this.musicEl.paused)).catch(() => false); // هنوز لمسی نشده
+    } catch { return Promise.resolve(false); }
   }
   public pauseMusic() { this.musicEl?.pause(); }
   public resumeMusic() { if (this.musicWanted) this.startMusic(); }
@@ -389,14 +396,19 @@ class SoundEngine {
 
 export const sound = new SoundEngine();
 
-// شروع موسیقی با اولین لمس، و توقف وقتی برنامه به پس‌زمینه می‌رود
+// شروع موسیقی از همان اول (اندروید/کپسیتور اجازه می‌دهد) و در غیر این صورت با اولین لمس.
+// نکته: در گوشی «pointerdown» لمسِ مجاز برای پخش صدا حساب نمی‌شود (فقط pointerup/touchend/click)؛
+// برای همین قبلاً بار اول موسیقی پخش نمی‌شد و فقط با رفتن به تنظیمات راه می‌افتاد.
+// حالا شنونده‌ها تا وقتی موسیقی واقعاً پخش نشده، سر جایشان می‌مانند.
 if (typeof window !== 'undefined') {
-  const kick = () => {
-    sound.startMusic();
-    window.removeEventListener('pointerdown', kick, true);
-    window.removeEventListener('keydown', kick, true);
+  const EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
+  const kick = (): void => {
+    if (sound.isMusicPlaying() || sound.getSettings().music <= 0) { stop(); return; }
+    sound.startMusic().then(ok => { if (ok || sound.isMusicPlaying()) stop(); });
   };
-  window.addEventListener('pointerdown', kick, true);
-  window.addEventListener('keydown', kick, true);
+  const stop = () => EVENTS.forEach(ev => window.removeEventListener(ev, kick, true));
+  EVENTS.forEach(ev => window.addEventListener(ev, kick, true));
+  // تلاش برای پخش خودکار بدون لمس (در APK معمولاً موفق است)
+  window.setTimeout(() => { sound.startMusic().then(ok => { if (ok) stop(); }); }, 600);
   document.addEventListener('visibilitychange', () => { if (document.hidden) { sound.pauseMusic(); sound.stopSpeech(); } else sound.resumeMusic(); });
 }

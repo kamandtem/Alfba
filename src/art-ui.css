@@ -352,3 +352,59 @@
 .syl-word-select{max-width:100%;line-height:1.2}
 .syl-row1 .syl-emoji.small{z-index:1;pointer-events:none}
 @media (max-width:520px){.syl-row1{min-height:140px;padding:6px}}
+
+/* ===== نسخهٔ ۱۱ ===== */
+/* بخش‌بخش کن: کلمهٔ طبقهٔ اول کمی کوچک‌تر، و جای کافی بالای کلمه تا سرکشِ «ک» و «گ» بریده نشود */
+.syl-word-select{overflow:visible;line-height:1.3;padding-top:.38em;padding-bottom:.06em}
+.syl-row1{padding-top:6px;padding-bottom:6px}
+.syl-slot-text{line-height:1.6}
+.syl-cell .tahriri{line-height:1.5}
+.syl-chip{height:auto;min-height:66px;line-height:1.5}
+.syl-chip.mini{min-height:48px;line-height:1.5}
+
+/* ترکیبات: اعراب جداگانه و دقیق روی/زیر حرف */
+.combo-stack{position:relative;display:inline-block;line-height:1;direction:rtl}
+.combo-base{display:block;line-height:1}
+.combo-mark{position:absolute;left:56%;transform:translateX(-50%);fill:#d32839;overflow:visible;pointer-events:none}
+.combination-result{line-height:1;padding:.4em .2em}
+
+/* جعبهٔ حروف: پنجرهٔ شکل‌ها بدون نوار اسکرول و با سرکش کامل «ک» و «گ» */
+.box-forms{overflow:visible;flex-wrap:nowrap;max-width:min(96vw,680px);gap:clamp(8px,3.5vw,30px);scrollbar-width:none}
+.box-forms::-webkit-scrollbar{display:none}
+.box-form{font-size:clamp(58px,12.5vw,104px);line-height:1.55;padding:.1em 8px 0}
+.box-key{line-height:1.6;overflow:visible}
+.box-key-forms{display:inline-flex;direction:rtl;align-items:baseline;gap:.3em;white-space:nowrap}
+.box-key-forms>span{display:inline-block;unicode-bidi:isolate}
+.lesson-pill-sign.lesson-form-run{gap:.22em}
+
+/* دیکتهٔ کلمهٔ ناقص: فقط یک نقطه‌چین طلایی (سه نقطهٔ بالایی حذف شد) */
+.dict-word .dict-blank{color:transparent}
+
+/* جمله‌سازی: دکمهٔ «جملهٔ بعدی» کنار تیک، و صندوقچهٔ جمله‌های ساخته‌شده پایین صفحه */
+.sentence-actions{flex-wrap:wrap;align-items:center}
+.sentence-actions .sentence-next{background:oklch(84% .12 79);color:oklch(35% .07 70);box-shadow:0 4px 0 oklch(70% .12 75)}
+.sentence-screen{position:relative}
+.sentence-chest-wrap{display:flex;justify-content:center;padding:6px 14px calc(18px + var(--sab,0px))}
+.sentence-chest{position:relative;display:grid;justify-items:center;gap:2px;border:0;background:transparent;padding:4px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sentence-chest img{width:clamp(110px,30vw,150px);height:auto;filter:drop-shadow(0 6px 5px oklch(30% .06 40/.25));transition:transform .2s}
+.sentence-chest:active img{transform:scale(.95)}
+.sentence-chest.bump img{animation:chestBump .7s cubic-bezier(.34,1.56,.64,1)}
+.sentence-chest span{margin-top:-14px;padding:3px 12px;border:2px solid oklch(80% .08 60);border-radius:14px;background:oklch(97% .03 85);color:oklch(40% .08 55);font-weight:1000;font-size:.8rem}
+.sentence-chest b{position:absolute;top:0;inset-inline-end:4px;display:grid;place-items:center;min-width:30px;height:30px;padding:0 6px;border:3px solid #fff;border-radius:16px;background:#ef5b5b;color:#fff;font-size:.85rem;font-weight:1000;box-shadow:0 3px 0 rgba(0,0,0,.15)}
+.sentence-fly{position:fixed;z-index:90;pointer-events:none;padding:6px 14px;border-radius:16px;background:oklch(93% .07 137);color:oklch(30% .1 137);font-size:1.6rem;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.15);animation:sentenceFly .9s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes sentenceFly{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.15);opacity:.2}}
+@keyframes chestBump{0%{transform:scale(1)}40%{transform:scale(1.18) rotate(-4deg)}100%{transform:scale(1)}}
+.sentence-list-backdrop{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:oklch(20% .03 250/.4)}
+.sentence-list{position:relative;width:min(100%,620px);max-height:78dvh;display:flex;flex-direction:column;padding:14px 16px calc(18px + env(safe-area-inset-bottom));border-radius:30px 30px 0 0;background:linear-gradient(180deg,oklch(78% .1 70),oklch(68% .1 55));box-shadow:0 -10px 30px oklch(20% .03 250/.3),inset 0 0 0 4px oklch(88% .08 75)}
+.sentence-list header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sentence-list header img{width:52px;height:auto}
+.sentence-list header div{flex:1;display:grid}
+.sentence-list header b{font-size:1.05rem;color:oklch(25% .05 45)}
+.sentence-list header small{font-size:.72rem;font-weight:800;color:oklch(35% .06 50)}
+.sentence-list ol{flex:1;margin:0;padding:10px;list-style:none;display:grid;gap:8px;align-content:start;overflow:auto;border-radius:20px;background:oklch(97% .025 85);box-shadow:inset 0 3px 8px oklch(40% .06 50/.18)}
+.sentence-list li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:14px;background:#fff;box-shadow:0 2px 0 oklch(88% .04 80)}
+.sentence-list li em{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:oklch(90% .09 137);color:oklch(35% .12 137);font-style:normal;font-weight:1000;font-size:.8rem}
+.sentence-list li button{flex:1;border:0;background:transparent;text-align:right;font-size:1.7rem;line-height:1.5;color:var(--ink);padding:0}
+.sentence-list-empty{text-align:center;padding:24px 10px;font-weight:800;color:oklch(45% .05 60)}
+.sentence-chest-wrap{margin-top:auto}
+.sentence-list header .art-close{width:46px;flex:none}

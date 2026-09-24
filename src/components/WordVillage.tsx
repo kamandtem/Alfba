@@ -15,6 +15,7 @@ import { ScoreIsland } from './shared/ScoreIsland';
 let sessionPoints = 0;
 import { cheer, FeedbackState, FeedbackToast, praise } from './shared/Feedback';
 import { CloseArt, OkArt } from './shared/ArtButtons';
+import { RoundComplete } from './shared/RoundComplete';
 
 type Mode = 'lesson' | 'suggest' | 'dictation' | 'free';
 interface FreePiece { id: string; token: string; x: number; y: number }
@@ -53,11 +54,12 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
   const [shakeWord, setShakeWord] = useState<string | null>(null);
   const [solved, setSolved] = useState(false);
   const [revealPeels, setRevealPeels] = useState(0);
+  const [roundDone, setRoundDone] = useState(false);
   const lastWord = useRef<string | null>(null);
   const autoTimer = useRef(0);
   const modeRef = useRef<Mode>(mode); modeRef.current = mode;
   useEffect(() => () => window.clearTimeout(autoTimer.current), []);
-  useEffect(() => { window.clearTimeout(autoTimer.current); }, [mode]);
+  useEffect(() => { window.clearTimeout(autoTimer.current); setRoundDone(false); }, [mode]);
 
   // --- هندسهٔ تخته
   useLayoutEffect(() => {
@@ -116,7 +118,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     }
   }, [slot]);
 
-  useEffect(() => { setTargetIdx(0); setSuggestIdx(0); setDictIdx(0); }, [lessonOrder]);
+  useEffect(() => { setTargetIdx(0); setSuggestIdx(0); setDictIdx(0); setRoundDone(false); }, [lessonOrder]);
   useEffect(() => { setRevealPeels(0); }, [mode, target?.id]);
   useEffect(() => { resetBoard(target, mode); }, [mode, target?.id, size.w > 0, mode === 'dictation' ? dictIdx : 0]); // eslint-disable-line
 
@@ -275,7 +277,28 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     }
   };
 
-  const next = () => { window.clearTimeout(autoTimer.current); if (modeRef.current === 'lesson') setTargetIdx(i => i + 1); else if (modeRef.current === 'dictation') setDictIdx(i => i + 1); else setSuggestIdx(i => i + 1); };
+  /** آیا کلمهٔ فعلی، آخرین کلمهٔ فهرستِ همین بخش است؟ */
+  const atLast = () => {
+    const m = modeRef.current;
+    if (m === 'lesson') return lessonList.length > 0 && targetIdx % lessonList.length === lessonList.length - 1;
+    if (m === 'dictation') return dictList.length > 0 && dictIdx % dictList.length === dictList.length - 1;
+    if (m === 'suggest') return suggestList.length > 0 && suggestIdx % suggestList.length === suggestList.length - 1;
+    return false;
+  };
+  // بعد از آخرین کلمه: پیام «موفق شدی» به‌جای برگشتِ بی‌خبر به کلمهٔ اول
+  const next = () => {
+    window.clearTimeout(autoTimer.current);
+    if (atLast()) { setRoundDone(true); return; }
+    if (modeRef.current === 'lesson') setTargetIdx(i => i + 1); else if (modeRef.current === 'dictation') setDictIdx(i => i + 1); else setSuggestIdx(i => i + 1);
+  };
+  const playAgain = () => {
+    setRoundDone(false);
+    const m = modeRef.current;
+    const idx = m === 'lesson' ? targetIdx : m === 'dictation' ? dictIdx : suggestIdx;
+    if (idx % Math.max(1, m === 'lesson' ? lessonList.length : m === 'dictation' ? dictList.length : suggestList.length) === 0) { resetBoard(target, m); return; }
+    if (m === 'lesson') setTargetIdx(0); else if (m === 'dictation') setDictIdx(0); else setSuggestIdx(0);
+  };
+  const roundTotal = mode === 'lesson' ? lessonList.length : mode === 'dictation' ? dictList.length : suggestList.length;
   const clearAll = () => { resetBoard(target, mode); sound.playPop(); };
   const revealedTarget = revealPeels >= REVEAL_PIECES;
   const revealTarget = () => {
@@ -358,7 +381,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
             ? <div className="dict-word tahriri solved" role="status" aria-label={`آفرین! ${dictItem.entry.word}`}>{dictItem.entry.word}</div>
             : <div className={`dict-word tahriri ${dictShake ? 'shake' : ''}`} aria-label="کلمه با یک جای خالی">
                 {dictItem.before && <span className="dict-part">{dictItem.before}</span>}
-                <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''}`} aria-label="جای خالی">•••</span>
+                <span ref={blankRef} className={`dict-blank ${hoverBlank ? 'hot' : ''}`} aria-label="جای خالی">{'\u00A0'}</span>
                 {dictItem.after && <span className="dict-part">{dictItem.after}</span>}
               </div>}
           <p className="dict-help">{dictFilled ? 'آفرین! کلمهٔ بعدی می‌آید…' : 'جعبهٔ حروف را باز کن، شکلِ درست را بردار و روی نقطه‌چین رها کن'}</p>
@@ -394,8 +417,9 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     {boxOpen && <div className="letter-box-backdrop" onClick={() => setBoxOpen(false)}>
       <section className="letter-box" onClick={e => e.stopPropagation()} aria-label="جعبه حروف">
         <header><img className="letter-box-chest" src="/assets/ui/letter-chest.svg" alt="" draggable={false} /><div><b>جعبهٔ حروف</b><small>روی یک نشانه بزن، بعد شکلش را روی تخته بکش</small></div><CloseArt className="box-close" onClick={() => setBoxOpen(false)} /></header>
-        {boxKey && <div className={`box-forms ${boxKey === 'he' ? 'he-box-forms' : ''}`} style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
-          {(boxKey === 'he' ? ['ه', 'ـه', 'ـهـ', 'هـ'] : LETTER_BOX.find(k => k.id === boxKey)!.pieces).map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
+        {boxKey && <div className="box-forms" dir="rtl" style={{ '--box-anchor': `${boxAnchor ?? 50}%` } as React.CSSProperties}>
+          {/* ترتیب شکل‌ها از راست به چپ مثل انتخاب درس: هـ ـهـ ـه ه */}
+          {LETTER_BOX.find(k => k.id === boxKey)!.pieces.map(t => <span key={t} className="box-form tahriri" onPointerDown={e => startNew(e, t)}>{kidGlyph(parseToken(t).glyph)}</span>)}
           {LETTER_BOX.find(k => k.id === boxKey)!.hint && <small className="box-form-hint">{LETTER_BOX.find(k => k.id === boxKey)!.hint}</small>}
         </div>}
         <div className="box-keys">
@@ -405,7 +429,7 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
             setBoxAnchor(parent ? ((rect.left + rect.width / 2 - parent.left) / parent.width * 100) : 50);
             setBoxKey(k.id); sound.playPop();
           }}>
-            {k.label ? <span className="box-key-label">{k.label}</span> : k.pieces.map(t => kidGlyph(parseToken(t).glyph)).join(' ')}
+            {k.label ? <span className="box-key-label">{k.label}</span> : <span className="box-key-forms">{k.pieces.map(t => <span key={t}>{kidGlyph(parseToken(t).glyph)}</span>)}</span>}
           </button>)}
         </div>
       </section>
@@ -413,5 +437,6 @@ export const WordVillage: React.FC<{ onBack: () => void; onComplete: (t: 'word',
     <ScoreIsland open={islandOpen} anchor={titleRef} session={session} total={stars} onClose={closeIsland} />
     {renderDragGhost()}
     <FeedbackToast state={fb} onClose={() => setFb(null)} ms={3800} />
+    <RoundComplete open={roundDone && mode !== 'free'} text={`همهٔ ${toFa(roundTotal)} کلمهٔ ${mode === 'lesson' ? 'این درس' : 'این دیکته'} را نوشتی.`} onAgain={playAgain} />
   </main>;
 };
