@@ -88,9 +88,10 @@ export const RecognitionVillage: React.FC<{ onBack: () => void; onHome: () => vo
 export function useAutoNext() {
   const t = useRef(0);
   useEffect(() => () => window.clearTimeout(t.current), []);
-  const fn = useCallback((next: () => void, ms = 1800) => { window.clearTimeout(t.current); t.current = window.setTimeout(next, ms); }, []) as ((next: () => void, ms?: number) => void) & { cancel: () => void };
-  fn.cancel = () => window.clearTimeout(t.current);
-  return fn;
+  return useMemo(() => {
+    const run = (next: () => void, ms = 1800) => { window.clearTimeout(t.current); t.current = window.setTimeout(next, ms); };
+    return Object.assign(run, { cancel: () => window.clearTimeout(t.current) });
+  }, []);
 }
 
 /* ------------------------------------------------------------------ */
