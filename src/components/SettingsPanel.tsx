@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { sound, type AudioSettings, DEFAULT_MUSIC } from '../utils/audio';
-import { getEducationalFont, setEducationalFont, type EducationalFont } from '../utils/fontSettings';
 
 const UI = '/assets/ui/settings';
 
@@ -47,9 +46,7 @@ const VolumeSlider: React.FC<{ value: number; onChange: (v: number) => void; onR
 /** پنجرهٔ «صداهای برنامه» دقیقاً مطابق تصویر مرجع */
 export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [s, setS] = useState<AudioSettings>(() => sound.getSettings());
-  const [font, setFont] = useState<EducationalFont>(() => getEducationalFont());
   const initial = useRef<AudioSettings>(sound.getSettings());
-  const initialFont = useRef<EducationalFont>(getEducationalFont());
   const lastOn = useRef({ sfx: s.sfx || 0.8, music: s.music || DEFAULT_MUSIC });
 
   useEffect(() => sound.subscribe(setS), []);
@@ -65,17 +62,11 @@ export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   const cancel = () => {
     sound.setSfxVolume(initial.current.sfx);
     sound.setMusicVolume(initial.current.music);
-    setEducationalFont(initialFont.current);
     sound.playPop();
     onClose();
   };
   /** تیک سبز: ذخیره و بستن (تنظیمات همان لحظه ذخیره شده‌اند) */
   const save = () => { sound.playSuccess(); onClose(); };
-  const chooseFont = (next: EducationalFont) => {
-    setFont(next);
-    setEducationalFont(next);
-    sound.playPop();
-  };
 
   return <div className="settings-scene" role="presentation" onClick={cancel}>
     <div className="menu-rays" aria-hidden="true" />
@@ -83,7 +74,7 @@ export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) =>
     <span className="menu-spark s1" aria-hidden="true">★</span><span className="menu-spark s2" aria-hidden="true">★</span><span className="menu-spark s3" aria-hidden="true">★</span>
     <div className="settings-sea" aria-hidden="true"><i /><i /><i /></div>
 
-    <section className="sound-panel" dir="ltr" role="dialog" aria-modal="true" aria-label="تنظیمات صدا و فونت" onClick={e => e.stopPropagation()}>
+    <section className="sound-panel" dir="ltr" role="dialog" aria-modal="true" aria-label="صداهای برنامه" onClick={e => e.stopPropagation()}>
       <img className="sound-panel-art" src={`${UI}/panel.svg`} alt="" draggable={false} />
 
       <button type="button" className="sound-btn sound-close" onClick={cancel} aria-label="بستن بدون ذخیره">
@@ -102,21 +93,6 @@ export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           <img src={`${UI}/icon-music.svg`} alt="" draggable={false} />
         </button>
         <VolumeSlider label="بلندی موسیقی" value={s.music} onChange={v => sound.setMusicVolume(v)} />
-      </div>
-
-      <div className="font-choice-panel" dir="rtl" aria-label="انتخاب فونت آموزشی">
-        <strong>انتخاب فونت آموزشی</strong>
-        <div className="font-choice-options">
-          <button type="button" className={`font-choice ${font === 'tahriri' ? 'active' : ''}`} aria-pressed={font === 'tahriri'} onClick={() => chooseFont('tahriri')}>
-            <span className="font-choice-preview font-choice-tahriri">الفبا</span>
-            <span>تحریری</span>
-          </button>
-          <button type="button" className={`font-choice ${font === 'vazirmatn' ? 'active' : ''}`} aria-pressed={font === 'vazirmatn'} onClick={() => chooseFont('vazirmatn')}>
-            <span className="font-choice-preview font-choice-vazirmatn">الفبا</span>
-            <span>وزیر</span>
-          </button>
-        </div>
-        <small>فقط متن‌های آموزشی تغییر می‌کند</small>
       </div>
 
       <button type="button" className="sound-btn sound-ok" onClick={save} aria-label="ذخیره و بستن">
